@@ -54,6 +54,7 @@
       const stageHost = document.getElementById("stage-host");
       let activeFrame = stageHost.querySelector("iframe");
       let pendingFrame = null;
+      let pendingStage = null;
 
       window.addEventListener("message", (event) => {
         if (event.origin !== window.location.origin) return;
@@ -62,27 +63,29 @@
 
         if (
           message.type === "stage-navigation"
-          && message.stage === "stage2"
+          && (message.stage === "stage2" || message.stage === "stage3")
           && event.source === activeFrame.contentWindow
           && !pendingFrame
         ) {
+          pendingStage = message.stage;
           pendingFrame = document.createElement("iframe");
           pendingFrame.className = "stage-frame";
-          pendingFrame.title = "대나무 공방 2단계";
-          pendingFrame.src = "stage2.html";
+          pendingFrame.title = `대나무 공방 ${pendingStage === "stage2" ? "2단계" : "3단계"}`;
+          pendingFrame.src = `${pendingStage}.html`;
           stageHost.appendChild(pendingFrame);
           return;
         }
 
         if (
           message.type === "stage-ready"
-          && message.stage === "stage2"
+          && message.stage === pendingStage
           && pendingFrame
           && event.source === pendingFrame.contentWindow
         ) {
           const previousFrame = activeFrame;
           activeFrame = pendingFrame;
           pendingFrame = null;
+          pendingStage = null;
           activeFrame.classList.add("is-active");
           previousFrame.classList.remove("is-active");
           previousFrame.classList.add("is-leaving");

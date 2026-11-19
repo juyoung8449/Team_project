@@ -495,6 +495,12 @@
 
   <script type="module">
     const errorScreen = document.getElementById("load-error");
+    function announceStageReady() {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: "stage-ready", stage: "stage3" }, "*");
+      }
+    }
+
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
       (() => {
         "use strict";
@@ -575,7 +581,9 @@
           return mesh;
         }
 
+        const workOffset = new THREE.Vector3(0.02, 0, -0.2);
         const table = new THREE.Group();
+        table.position.copy(workOffset);
         scene.add(table);
         const plankColors = [0x624a32, 0x705238, 0x664a30, 0x76583b, 0x624831];
         for (let index = 0; index < 5; index += 1) {
@@ -605,14 +613,156 @@
         addBox(table, [0.19, 0.15, 4.15], braceMaterial, [3.98, -0.25, 0]);
 
         const TABLE_TOP = 0.56;
+        const domaLength = 4;
+        const domaWidth = 1.5;
+        const domaThickness = 0.16;
+        const domaStartScale = 0.9;
+        const doma = new THREE.Group();
+        doma.position.set(workOffset.x, TABLE_TOP + domaThickness / 2, 1.28 + workOffset.z);
+        doma.scale.set(domaStartScale, 1, domaStartScale);
+        scene.add(doma);
+
+        function roundedRectangle(width, height, radius) {
+          const halfWidth = width / 2;
+          const halfHeight = height / 2;
+          const shape = new THREE.Shape();
+          shape.moveTo(-halfWidth + radius, -halfHeight);
+          shape.lineTo(halfWidth - radius, -halfHeight);
+          shape.quadraticCurveTo(halfWidth, -halfHeight, halfWidth, -halfHeight + radius);
+          shape.lineTo(halfWidth, halfHeight - radius);
+          shape.quadraticCurveTo(halfWidth, halfHeight, halfWidth - radius, halfHeight);
+          shape.lineTo(-halfWidth + radius, halfHeight);
+          shape.quadraticCurveTo(-halfWidth, halfHeight, -halfWidth, halfHeight - radius);
+          shape.lineTo(-halfWidth, -halfHeight + radius);
+          shape.quadraticCurveTo(-halfWidth, -halfHeight, -halfWidth + radius, -halfHeight);
+          return shape;
+        }
+
+        let woodSeed = 39271;
+        function woodRandom() {
+          woodSeed = (woodSeed * 16807) % 2147483647;
+          return (woodSeed - 1) / 2147483646;
+        }
+
+        function makeWoodTexture() {
+          const canvas = document.createElement("canvas");
+          canvas.width = 1024;
+          canvas.height = 512;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Could not create the cutting board texture.");
+
+          const base = context.createLinearGradient(0, 0, 0, canvas.height);
+          base.addColorStop(0, "#81765f");
+          base.addColorStop(0.48, "#766e5d");
+          base.addColorStop(1, "#6b6455");
+          context.fillStyle = base;
+          context.fillRect(0, 0, canvas.width, canvas.height);
+
+          for (let index = 0; index < 270; index += 1) {
+            const y = woodRandom() * canvas.height;
+            const phase = woodRandom() * Math.PI * 2;
+            const amplitude = 1.5 + woodRandom() * 4;
+            const frequency = 0.002 + woodRandom() * 0.012;
+            const darkGrain = woodRandom() > 0.48;
+            const alpha = darkGrain ? 0.11 + woodRandom() * 0.14 : 0.06 + woodRandom() * 0.1;
+            context.strokeStyle = darkGrain
+              ? `rgba(43, 34, 24, ${alpha})`
+              : `rgba(195, 180, 151, ${alpha})`;
+            context.lineWidth = 0.8 + woodRandom() * 1.4;
+            context.beginPath();
+            for (let x = 0; x <= canvas.width; x += 16) {
+              const wave = Math.sin(x * frequency + phase) * amplitude
+                + Math.sin(x * frequency * 0.29 + phase * 1.6) * amplitude * 0.62;
+              context.lineTo(x, y + wave);
+            }
+            context.stroke();
+          }
+
+          for (let index = 0; index < 6; index += 1) {
+            const x = 110 + woodRandom() * (canvas.width - 220);
+            const y = 55 + woodRandom() * (canvas.height - 110);
+            const angle = (woodRandom() - 0.5) * 0.08;
+            const radiusX = 12 + woodRandom() * 12;
+            const radiusY = 3 + woodRandom() * 2.5;
+            context.save();
+            context.translate(x, y);
+            context.rotate(angle);
+            for (let ring = 0; ring < 6; ring += 1) {
+              context.beginPath();
+              context.ellipse(0, 0, radiusX + ring * 4, radiusY + ring * 1.6, 0, 0, Math.PI * 2);
+              context.strokeStyle = `rgba(42, 33, 24, ${0.34 - ring * 0.035})`;
+              context.lineWidth = 1.2 + (ring === 0 ? 0.8 : 0);
+              context.stroke();
+            }
+            context.beginPath();
+            context.ellipse(0, 0, radiusX * 0.45, radiusY * 0.55, 0, 0, Math.PI * 2);
+            context.fillStyle = "rgba(42, 33, 24, 0.24)";
+            context.fill();
+            context.restore();
+          }
+
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          return texture;
+        }
+
+        const woodTexture = makeWoodTexture();
+        const domaMaterial = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          map: woodTexture,
+          bumpMap: woodTexture,
+          bumpScale: 0.022,
+          roughness: 0.98,
+          metalness: 0
+        });
+        const domaShape = roundedRectangle(domaLength, domaWidth, 0.05);
+        const domaGeometry = new THREE.ExtrudeGeometry(domaShape, {
+          depth: domaThickness,
+          bevelEnabled: false,
+          steps: 1,
+          curveSegments: 6
+        });
+        domaGeometry.translate(0, 0, -domaThickness / 2);
+        const domaBoard = new THREE.Mesh(domaGeometry, domaMaterial);
+        domaBoard.rotation.x = -Math.PI / 2;
+        domaBoard.castShadow = false;
+        domaBoard.receiveShadow = true;
+        doma.add(domaBoard);
+
+        const domaTopGeometry = new THREE.ShapeGeometry(domaShape, 6);
+        const domaTopPositions = domaTopGeometry.attributes.position;
+        const domaTopUvs = [];
+        for (let index = 0; index < domaTopPositions.count; index += 1) {
+          domaTopUvs.push(
+            (domaTopPositions.getX(index) + domaLength / 2) / domaLength,
+            (domaTopPositions.getY(index) + domaWidth / 2) / domaWidth
+          );
+        }
+        domaTopGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(domaTopUvs, 2));
+        const domaTop = new THREE.Mesh(domaTopGeometry, domaMaterial);
+        domaTop.rotation.x = -Math.PI / 2;
+        domaTop.position.y = domaThickness / 2 + 0.0005;
+        domaTop.receiveShadow = true;
+        doma.add(domaTop);
+
         const bambooLength = 3.5;
+        const bambooRadius = 0.044;
+        const bambooRestY = TABLE_TOP + domaThickness + 0.0005 + bambooRadius;
         const bamboo = new THREE.Group();
-        bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
+        bamboo.position.set(workOffset.x, bambooRestY, 1.28 + workOffset.z);
         scene.add(bamboo);
 
-        const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
+        const bambooBodyMaterial = new THREE.MeshStandardMaterial({
+          color: 0xc69b69,
+          roughness: 0.52,
+          metalness: 0.02
+        });
+        const bambooNodeMaterial = new THREE.MeshStandardMaterial({
+          color: 0x85663e,
+          roughness: 0.62,
           metalness: 0.02
         });
         const cutFaceMaterial = new THREE.MeshStandardMaterial({
@@ -627,23 +777,232 @@
         const initialEnd = bambooLength / 2;
         let currentStart = initialStart;
         let currentEnd = initialEnd;
-        const bambooBody = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooLength, 32, 1),
-          bambooMaterial
+        const bambooCurve = new THREE.LineCurve3(
+          new THREE.Vector3(initialStart, 0, 0),
+          new THREE.Vector3(initialEnd, 0, 0)
         );
-        bambooBody.quaternion.copy(bodyAxis);
+        const bambooBody = new THREE.Mesh(
+          new THREE.TubeGeometry(bambooCurve, 64, bambooRadius, 16, false),
+          bambooBodyMaterial
+        );
         bambooBody.castShadow = true;
         bambooBody.receiveShadow = true;
         bamboo.add(bambooBody);
 
+        const bambooSurfaceDetails = [];
+        const bambooNodePositions = [0.06, 0.25, 0.5, 0.75, 0.94];
+        for (const t of bambooNodePositions) {
+          const node = new THREE.Mesh(
+            new THREE.TorusGeometry(bambooRadius, 0.004, 8, 24),
+            bambooNodeMaterial
+          );
+          node.position.copy(bambooCurve.getPointAt(t));
+          node.quaternion.setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            bambooCurve.getTangentAt(t).normalize()
+          );
+          bamboo.add(node);
+          bambooSurfaceDetails.push({ mesh: node, x: node.position.x });
+        }
+
         const bambooEnds = [];
         for (const x of [initialStart, initialEnd]) {
-          const end = new THREE.Mesh(new THREE.SphereGeometry(0.044, 16, 12), bambooMaterial);
+          const end = new THREE.Mesh(
+            new THREE.SphereGeometry(bambooRadius, 16, 12),
+            bambooBodyMaterial
+          );
           end.position.x = x;
           end.castShadow = true;
           bamboo.add(end);
           bambooEnds.push(end);
         }
+
+        const knifeScale = 0.55;
+        const knifeHandleLength = 1.05;
+        const knifeHandleWidth = 0.35;
+        const knifeHandleThickness = 0.14;
+        const knifeHandleBevel = 0.018;
+        const knifeBladeLength = 1.3;
+        const knifeBladeWidth = 0.25;
+        const knifeBladeThickness = 0.04;
+        const knifeBladeBevel = 0.006;
+        const knifeOverlap = 0.045;
+        const knifeTotalLength = knifeHandleLength + knifeBladeLength - knifeOverlap;
+        let knifeSeed = 85431;
+        function knifeRandom() {
+          knifeSeed = (knifeSeed * 16807) % 2147483647;
+          return (knifeSeed - 1) / 2147483646;
+        }
+
+        function makeKnifeHandleTexture() {
+          const canvas = document.createElement("canvas");
+          canvas.width = 512;
+          canvas.height = 256;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Could not create the knife handle texture.");
+          context.fillStyle = "#535b5f";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+
+          for (let index = 0; index < 1700; index += 1) {
+            const shade = knifeRandom() > 0.56 ? 17 : 139;
+            const alpha = shade < 40 ? 0.08 + knifeRandom() * 0.12 : 0.035 + knifeRandom() * 0.08;
+            context.fillStyle = `rgba(${shade - 2}, ${shade}, ${shade + 3}, ${alpha})`;
+            const x = knifeRandom() * canvas.width;
+            const y = knifeRandom() * canvas.height;
+            context.beginPath();
+            context.ellipse(
+              x,
+              y,
+              0.5 + knifeRandom() * 2.4,
+              0.45 + knifeRandom() * 1.5,
+              (knifeRandom() - 0.5) * 0.9,
+              0,
+              Math.PI * 2
+            );
+            context.fill();
+          }
+
+          for (let index = 0; index < 120; index += 1) {
+            const x = knifeRandom() * canvas.width;
+            const y = knifeRandom() * canvas.height;
+            const length = 2 + knifeRandom() * 16;
+            const shade = knifeRandom() > 0.5 ? 18 : 172;
+            context.strokeStyle = `rgba(${shade - 2}, ${shade}, ${shade + 4}, ${0.035 + knifeRandom() * 0.08})`;
+            context.lineWidth = 0.5 + knifeRandom() * 1.2;
+            context.beginPath();
+            context.moveTo(x, y);
+            context.lineTo(x + length, y + (knifeRandom() - 0.5) * 2);
+            context.stroke();
+          }
+
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(2, 1.2);
+          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          return texture;
+        }
+
+        function makeKnifeBladeTexture() {
+          const canvas = document.createElement("canvas");
+          canvas.width = 512;
+          canvas.height = 256;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Could not create the knife blade texture.");
+          context.fillStyle = "#abb4b8";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          for (let index = 0; index < 150; index += 1) {
+            const y = knifeRandom() * canvas.height;
+            const shade = knifeRandom() > 0.5 ? 57 : 224;
+            context.strokeStyle = `rgba(${shade - 2}, ${shade}, ${shade + 4}, ${0.04 + knifeRandom() * 0.09})`;
+            context.lineWidth = 0.4 + knifeRandom() * 1.2;
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(canvas.width, y + (knifeRandom() - 0.5) * 1.2);
+            context.stroke();
+          }
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          return texture;
+        }
+
+        const knifeHandleMaterial = new THREE.MeshStandardMaterial({
+          color: 0xcbd1d4,
+          map: makeKnifeHandleTexture(),
+          bumpScale: 0.005,
+          roughness: 0.5,
+          metalness: 0.38
+        });
+        knifeHandleMaterial.bumpMap = knifeHandleMaterial.map;
+        const knifeBladeMaterial = new THREE.MeshStandardMaterial({
+          color: 0xf0f3f5,
+          map: makeKnifeBladeTexture(),
+          bumpScale: 0.0015,
+          roughness: 0.32,
+          metalness: 0.48
+        });
+        knifeBladeMaterial.bumpMap = knifeBladeMaterial.map;
+
+        function makeKnifeSlab(length, width, thickness, radius, bevel, material) {
+          const geometry = new THREE.ExtrudeGeometry(roundedRectangle(length, width, radius), {
+            depth: thickness,
+            bevelEnabled: true,
+            bevelSegments: 2,
+            steps: 1,
+            bevelSize: bevel,
+            bevelThickness: bevel,
+            curveSegments: 6
+          });
+          geometry.translate(0, 0, -thickness / 2);
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          return mesh;
+        }
+
+        const knife = new THREE.Group();
+        const knifeHandleRight = -knifeTotalLength / 2 + knifeHandleLength;
+        const knifeBladeCenterX = knifeHandleRight - knifeOverlap + knifeBladeLength / 2;
+        const knifeHandle = makeKnifeSlab(
+          knifeHandleLength,
+          knifeHandleWidth,
+          knifeHandleThickness,
+          0.07,
+          knifeHandleBevel,
+          knifeHandleMaterial
+        );
+        knifeHandle.position.x = -knifeTotalLength / 2 + knifeHandleLength / 2;
+        knife.add(knifeHandle);
+
+        const knifeBlade = makeKnifeSlab(
+          knifeBladeLength,
+          knifeBladeWidth,
+          knifeBladeThickness,
+          0.045,
+          knifeBladeBevel,
+          knifeBladeMaterial
+        );
+        knifeBlade.position.set(
+          knifeBladeCenterX,
+          -(knifeHandleThickness - knifeBladeThickness) / 2 - knifeHandleBevel + knifeBladeBevel,
+          0
+        );
+        knife.add(knifeBlade);
+
+        knife.scale.setScalar(knifeScale);
+        const knifeDirection = new THREE.Vector3(0.55, -0.4, 0.73).normalize();
+        const knifeFaceNormal = new THREE.Vector3(3, 0.42, 0.22).normalize();
+        knifeFaceNormal.addScaledVector(
+          knifeDirection,
+          -knifeFaceNormal.dot(knifeDirection)
+        ).normalize();
+        const knifeSide = new THREE.Vector3()
+          .crossVectors(knifeDirection, knifeFaceNormal)
+          .normalize();
+        knife.quaternion.setFromRotationMatrix(
+          new THREE.Matrix4().makeBasis(knifeDirection, knifeFaceNormal, knifeSide)
+        );
+        const knifeContact = new THREE.Vector3(
+          bamboo.position.x + bambooLength / 2 - bambooLength / 12,
+          bambooRestY + bambooRadius,
+          bamboo.position.z
+        );
+        knife.position.copy(knifeContact)
+          .addScaledVector(knifeDirection, -knifeTotalLength / 2 * knifeScale)
+          .addScaledVector(
+            knifeSide,
+            (knifeBladeWidth / 2 + knifeBladeBevel) * knifeScale
+          )
+          .addScaledVector(
+            knifeFaceNormal,
+            (knifeHandleThickness / 2 + knifeHandleBevel) * knifeScale
+          );
+        scene.add(knife);
 
         const cutLength = bambooLength / 12;
         const cutPositions = [-bambooLength / 2 + cutLength, bambooLength / 2 - cutLength];
@@ -706,26 +1065,77 @@
 
         function setBambooRange(start, end) {
           bambooBody.geometry.dispose();
-          bambooBody.geometry = new THREE.CylinderGeometry(0.044, 0.044, end - start, 32, 1);
-          bambooBody.position.x = (start + end) / 2;
+          bambooBody.geometry = new THREE.TubeGeometry(
+            new THREE.LineCurve3(
+              new THREE.Vector3(start, 0, 0),
+              new THREE.Vector3(end, 0, 0)
+            ),
+            64,
+            bambooRadius,
+            16,
+            false
+          );
+          for (const detail of bambooSurfaceDetails) {
+            detail.mesh.visible = detail.x >= start && detail.x <= end;
+          }
           currentStart = start;
           currentEnd = end;
         }
+
+        const cameraStartPosition = new THREE.Vector3(0, 6.75, 10.8);
+        const cameraStartTarget = new THREE.Vector3(0, 1.05, 0);
+        const cameraFocusTarget = new THREE.Vector3(
+          bamboo.position.x + cutPositions[1] - workOffset.x,
+          bambooRestY,
+          bamboo.position.z - workOffset.z
+        );
+        const cameraFocusPosition = cameraFocusTarget.clone().add(new THREE.Vector3(3, 0.42, 0.22));
+        const cameraTarget = cameraStartTarget.clone();
+        camera.position.copy(cameraStartPosition);
+        camera.lookAt(cameraTarget);
 
         function resize() {
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
-          camera.position.set(0, 6.75, 10.8);
-          camera.lookAt(0, 1.05, 0);
+          camera.lookAt(cameraTarget);
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
         }
 
         let cutCount = 0;
-        let phase = "playing";
+        let phase = "intro";
         let hoveredMarker = null;
         let toastTimer = 0;
+        const introStartedAt = performance.now();
+
+        function easeInOut(value) {
+          const progress = THREE.MathUtils.clamp(value, 0, 1);
+          return progress * progress * (3 - 2 * progress);
+        }
+
+        function updateIntro(timestamp) {
+          const elapsed = (timestamp - introStartedAt) / 1000;
+          const cameraProgress = easeInOut(elapsed / 1.4);
+          camera.position.lerpVectors(cameraStartPosition, cameraFocusPosition, cameraProgress);
+          cameraTarget.lerpVectors(cameraStartTarget, cameraFocusTarget, cameraProgress);
+          camera.lookAt(cameraTarget);
+
+          const boardProgress = easeInOut((elapsed - 0.2) / 0.9);
+          const boardScale = THREE.MathUtils.lerp(domaStartScale, 1, boardProgress);
+          doma.scale.set(boardScale, 1, boardScale);
+
+          if (elapsed >= 2.15) {
+            doma.scale.set(1, 1, 1);
+            camera.position.copy(cameraFocusPosition);
+            cameraTarget.copy(cameraFocusTarget);
+            camera.lookAt(cameraTarget);
+            phase = "playing";
+            instruction.textContent = "대나무 양쪽의 점선을 차례로 클릭하세요.";
+            updateProgress();
+            renderer.domElement.style.cursor = "default";
+          }
+        }
 
         function updateProgress() {
           const percent = cutCount / cutMarkers.length * 100;
@@ -866,11 +1276,19 @@
         window.addEventListener("resize", resize);
         resize();
         updateProgress();
-        renderer.setAnimationLoop(() => renderer.render(scene, camera));
+        instruction.textContent = "도마를 준비하고 있습니다.";
+        progressHint.textContent = "도마가 놓인 뒤 재단을 시작하세요";
+        progressState.textContent = "준비 중";
+        renderer.setAnimationLoop((timestamp) => {
+          if (phase === "intro") updateIntro(timestamp);
+          renderer.render(scene, camera);
+        });
+        announceStageReady();
       })();
     }).catch((error) => {
       console.error("Three.js failed to load; the cutting stage could not start.", error);
       errorScreen.classList.add("is-visible");
+      announceStageReady();
     });
   </script>
 </body>
