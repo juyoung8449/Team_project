@@ -52,10 +52,46 @@
         linear-gradient(0deg, rgba(11, 17, 15, .78), transparent 34%, rgba(11, 17, 15, .3));
     }
 
-    #interface {
+    #sanding-guides {
       position: fixed;
       inset: 0;
       z-index: 2;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+      opacity: 1;
+    }
+
+    #sanding-guides.is-hidden { opacity: 0; }
+
+    .sanding-guide-marker {
+      opacity: 1;
+    }
+
+    .sanding-guide-marker.is-hidden { opacity: 0; }
+
+    .sanding-guide-ring {
+      fill: rgba(255, 255, 255, .035);
+      stroke: rgba(255, 255, 246, .94);
+      stroke-width: 1.6;
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, .55));
+      animation: sanding-guide-pulse 1.65s ease-in-out infinite;
+    }
+
+    @keyframes sanding-guide-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sanding-guide-ring { animation: none; }
+    }
+
+    #interface {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
       pointer-events: none;
     }
 
@@ -131,9 +167,9 @@
 
     .intro {
       position: absolute;
-      top: clamp(145px, 25vh, 220px);
+      top: clamp(104px, 18vh, 168px);
       left: clamp(44px, 7vw, 112px);
-      width: min(365px, 34vw);
+      width: min(430px, 42vw);
     }
 
     .eyebrow {
@@ -157,10 +193,10 @@
     h1 {
       margin: 0;
       font-family: "Batang", "Nanum Myeongjo", "Malgun Gothic", serif;
-      font-size: clamp(34px, 3.5vw, 49px);
+      font-size: clamp(28px, 3vw, 36px);
       font-weight: 500;
       letter-spacing: -.08em;
-      line-height: 1.35;
+      line-height: 1.25;
       text-shadow: 0 3px 24px rgba(0, 0, 0, .35);
     }
 
@@ -170,8 +206,8 @@
     }
 
     #instruction {
-      min-height: 48px;
-      margin: 18px 0 0;
+      min-height: 36px;
+      margin: 13px 0 0;
       color: #c7c7b8;
       font-size: 13px;
       font-weight: 400;
@@ -184,7 +220,7 @@
       display: flex;
       align-items: center;
       gap: 11px;
-      margin-top: 24px;
+      margin-top: 16px;
       color: #a7ad9e;
       font-size: 11px;
       letter-spacing: .015em;
@@ -410,27 +446,6 @@
       background: #ebc98e;
     }
 
-    #toast {
-      position: absolute;
-      bottom: 138px;
-      left: 50%;
-      padding: 10px 15px;
-      border: 1px solid rgba(227, 206, 164, .22);
-      border-radius: 999px;
-      background: rgba(23, 31, 28, .9);
-      color: #e4d7bb;
-      font-size: 11px;
-      opacity: 0;
-      transform: translate(-50%, 8px);
-      transition: opacity .2s, transform .2s;
-      white-space: nowrap;
-    }
-
-    #toast.is-visible {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-
     #load-error {
       position: fixed;
       inset: 0;
@@ -445,11 +460,30 @@
 
     #load-error.is-visible { display: grid; }
     #load-error p { max-width: 470px; line-height: 1.8; }
+
+    @media (max-width: 620px) {
+      .topbar { top: 16px; left: 18px; right: 18px; }
+      .intro {
+        top: 82px;
+        left: 20px;
+        width: min(350px, calc(100vw - 40px));
+      }
+      .intro .eyebrow { margin-bottom: 10px; }
+      h1 { font-size: clamp(25px, 7vw, 32px); }
+      #instruction { min-height: 0; margin-top: 8px; font-size: 11px; }
+      .gesture-note { margin-top: 8px; font-size: 10px; }
+      .bottom-area { right: 12px; bottom: 12px; left: 12px; }
+      .progress-card { padding: 12px 14px 11px; }
+      .progress-label { gap: 8px; font-size: 9px; }
+      #complete-screen { padding: 14px; }
+      .complete-card { padding: 26px 20px 22px; }
+    }
   </style>
 </head>
 <body>
   <div id="scene" aria-label="마디를 다듬는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <svg id="sanding-guides" aria-hidden="true"></svg>
 
   <main id="interface">
     <header class="topbar">
@@ -465,26 +499,26 @@
 
     <section class="intro" aria-live="polite">
       <p class="eyebrow">STAGE 02 &nbsp; / &nbsp; TRIMMING</p>
-      <h1>마디를 하나씩<br><em>다듬어 주세요</em></h1>
-      <p id="instruction">대나무에 돌출된 마디 부분을 하나씩 클릭하세요.</p>
+      <h1>대나무를 <em>다듬어 주세요</em></h1>
+      <p id="instruction">사포를 대나무와 같은 높이로 맞추고 길이 방향으로 쓸어주세요.</p>
       <div class="gesture-note">
-        <span class="click-icon" aria-hidden="true">＋</span>
-        <span>대나무의 마디를 클릭해 제거하세요</span>
+        <span class="click-icon" aria-hidden="true">↔</span>
+        <span>사포를 잡고 대나무 위를 두 번 지나가세요</span>
       </div>
     </section>
 
     <section class="bottom-area" aria-live="polite">
       <div class="progress-card">
         <div class="progress-head">
-          <div class="progress-title"><span class="progress-mark" aria-hidden="true">Ⅱ</span><span>대나무 마디 다듬기</span></div>
-          <strong id="node-count">0<small> / 5</small></strong>
+          <div class="progress-title"><span class="progress-mark" aria-hidden="true">Ⅱ</span><span>대나무 다듬기</span></div>
+          <strong id="node-count">0<small> / 8</small></strong>
         </div>
-        <div class="progress-track" role="progressbar" aria-label="마디 다듬기 진행도" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+        <div class="progress-track" role="progressbar" aria-label="대나무 다듬기 진행도" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
           <div id="progress-fill"></div>
         </div>
         <div class="progress-label">
-          <span id="progress-hint">돌출된 마디를 하나씩 클릭하세요</span>
-          <span id="progress-state">다듬기 준비</span>
+          <span id="progress-hint">사포를 잡고 대나무를 따라 두 번 쓸어주세요</span>
+          <span id="progress-state">연마 준비</span>
         </div>
       </div>
     </section>
@@ -494,7 +528,7 @@
         <div class="complete-seal" aria-hidden="true">✓</div>
         <p class="complete-kicker">STAGE 02 COMPLETE</p>
         <h2 id="complete-title">2단계 완료</h2>
-        <p class="complete-copy">대나무의 마디를 모두 다듬었어요.<br>다음 작업을 준비해보세요.</p>
+        <p class="complete-copy">대나무 표면을 매끈하게 다듬었어요.<br>다음 작업을 준비해보세요.</p>
         <div class="complete-actions">
           <button class="action-button" id="retry-button" type="button">2단계 다시하기</button>
           <button class="action-button primary" id="next-button" type="button">3단계로 넘어가기 <span aria-hidden="true">→</span></button>
@@ -502,7 +536,6 @@
       </div>
     </section>
 
-    <div id="toast" role="status" aria-live="polite"></div>
   </main>
 
   <div id="load-error" role="alert">
@@ -511,11 +544,18 @@
 
   <script type="module">
     const errorScreen = document.getElementById("load-error");
+    function announceStageReady() {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: "stage-ready", stage: "stage2" }, "*");
+      }
+    }
+
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
       (() => {
         "use strict";
 
         const host = document.getElementById("scene");
+        const sandingGuideLayer = document.getElementById("sanding-guides");
         const instruction = document.getElementById("instruction");
         const nodeCountLabel = document.getElementById("node-count");
         const progressFill = document.getElementById("progress-fill");
@@ -523,8 +563,6 @@
         const progressHint = document.getElementById("progress-hint");
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
-        const toast = document.getElementById("toast");
-
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
         scene.fog = new THREE.Fog(0x17211e, 17, 32);
@@ -622,38 +660,92 @@
 
         const TABLE_TOP = 0.56;
         const bambooLength = 3.5;
+        const bambooRadius = 0.044;
         const bamboo = new THREE.Group();
         bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
         scene.add(bamboo);
 
         const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
+          color: 0xc69b69,
+          roughness: 0.52,
           metalness: 0.02
         });
         const bambooNodeMaterial = new THREE.MeshStandardMaterial({
-          color: 0x4c633b,
-          roughness: 0.6,
+          color: 0x85663e,
+          roughness: 0.62,
           metalness: 0.02
         });
-        const nodeHitMaterial = new THREE.MeshBasicMaterial({
-          transparent: true,
-          opacity: 0,
-          colorWrite: false,
-          depthWrite: false
-        });
+        function createBambooSpotTexture(seed) {
+          const textureCanvas = document.createElement("canvas");
+          textureCanvas.width = 128;
+          textureCanvas.height = 128;
+          const context = textureCanvas.getContext("2d");
+          if (!context) throw new Error("Could not create a bamboo stain texture.");
+
+          let textureSeed = Math.floor(seed * 2147483646) + 1;
+          const random = () => {
+            textureSeed = (textureSeed * 16807) % 2147483647;
+            return (textureSeed - 1) / 2147483646;
+          };
+          const centerX = 64 + (random() - 0.5) * 10;
+          const centerY = 64 + (random() - 0.5) * 8;
+          const radiusX = 40 + random() * 8;
+          const radiusY = 30 + random() * 8;
+          const phases = [random(), random(), random()].map((value) => value * Math.PI * 2);
+          const image = context.createImageData(128, 128);
+
+          for (let y = 0; y < 128; y += 1) {
+            for (let x = 0; x < 128; x += 1) {
+              const normalizedX = (x - centerX) / radiusX;
+              const normalizedY = (y - centerY) / radiusY;
+              const angle = Math.atan2(normalizedY, normalizedX);
+              const pixelIndex = (y * 128 + x) * 4;
+              image.data[pixelIndex] = 198;
+              image.data[pixelIndex + 1] = 155;
+              image.data[pixelIndex + 2] = 105;
+              const unevenEdge = (1 + 0.07 * normalizedX) * (
+                1
+                + 0.08 * Math.sin(angle * 3 + phases[0])
+                + 0.04 * Math.cos(angle * 5 + phases[1])
+                + 0.025 * Math.sin(angle * 8 + phases[2])
+              );
+              const distance = Math.hypot(normalizedX, normalizedY) / unevenEdge;
+              if (distance >= 1) continue;
+
+              const edgeFade = Math.pow(1 - distance, 0.58);
+              const mottling = 0.78
+                + 0.13 * Math.sin(x * 0.13 + phases[0]) * Math.cos(y * 0.15 + phases[1])
+                + 0.09 * Math.sin((x + y) * 0.11 + phases[2]);
+              image.data[pixelIndex] = 46 + Math.round(mottling * 2);
+              image.data[pixelIndex + 1] = 26 + Math.round(mottling * 2);
+              image.data[pixelIndex + 2] = 15 + Math.round(mottling * 1.5);
+              image.data[pixelIndex + 3] = Math.round(255 * 0.8 * edgeFade * mottling);
+            }
+          }
+
+          context.putImageData(image, 0, 0);
+          const texture = new THREE.CanvasTexture(textureCanvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          return texture;
+        }
 
         const nodePositions = [0.06, 0.25, 0.5, 0.75, 0.94];
-        const nodeGroups = [];
         const ringNormal = new THREE.Vector3(0, 0, 1);
-        const up = new THREE.Vector3(0, 1, 0);
-        const removalAnimations = [];
-        const NODE_TOTAL = nodePositions.length;
-        let removedCount = 0;
+        const bambooSpots = [];
+        const SPOT_TOTAL = 8;
+        const SPOT_BASE_OPACITY = 0.86;
+        const sandingFades = [];
+        const guideWorldPosition = new THREE.Vector3();
+        const guideScreenPosition = new THREE.Vector3();
+        const guideNormal = new THREE.Vector3();
+        const guideToCamera = new THREE.Vector3();
+        const guideQuaternion = new THREE.Quaternion();
+        let cleanedSpotCount = 0;
+        let sandingGuidesVisible = true;
         let phase = "playing";
-        let hoveredNode = null;
-        let toastTimer = 0;
-
+        let isSapoDragging = false;
+        let hasSapoBeenDragged = false;
+        let sapoBendAmount = 0;
         function makeBambooCurve() {
           const points = [];
           for (let index = 0; index <= 8; index += 1) {
@@ -665,72 +757,301 @@
 
         const bambooCurve = makeBambooCurve();
         const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooLength, 32, 1),
+          new THREE.TubeGeometry(bambooCurve, 64, bambooRadius, 16, false),
           bambooMaterial
         );
-        body.quaternion.setFromUnitVectors(up, new THREE.Vector3(1, 0, 0));
         body.castShadow = true;
         body.receiveShadow = true;
         bamboo.add(body);
 
         for (const t of [0, 1]) {
-          const end = new THREE.Mesh(new THREE.SphereGeometry(0.044, 16, 12), bambooMaterial);
+          const end = new THREE.Mesh(
+            new THREE.SphereGeometry(bambooRadius, 16, 12),
+            bambooMaterial
+          );
           end.position.copy(bambooCurve.getPointAt(t));
           end.castShadow = true;
           bamboo.add(end);
         }
 
-        for (let index = 0; index < nodePositions.length; index += 1) {
-          const node = new THREE.Group();
-          const t = nodePositions[index];
+        const bambooSpotGeometry = new THREE.CircleGeometry(1, 40);
+        let bambooSpotSeed = 57391;
+        const bambooSpotRandom = () => {
+          bambooSpotSeed = (bambooSpotSeed * 16807) % 2147483647;
+          return (bambooSpotSeed - 1) / 2147483646;
+        };
+        for (let index = 0; index < SPOT_TOTAL; index += 1) {
+          const spotMaterial = new THREE.MeshStandardMaterial({
+            map: createBambooSpotTexture(bambooSpotRandom()),
+            transparent: true,
+            opacity: SPOT_BASE_OPACITY,
+            depthWrite: false,
+            roughness: 0.94,
+            metalness: 0
+          });
+          const spot = new THREE.Mesh(bambooSpotGeometry, spotMaterial);
+          spot.scale.set(
+            0.056 + bambooSpotRandom() * 0.024,
+            0.018 + bambooSpotRandom() * 0.012,
+            1
+          );
+          const t = (index + 0.2 + bambooSpotRandom() * 0.6) / SPOT_TOTAL;
+          // radialA is up and radialB faces the camera; keep stains on the upper surface.
+          const angle = bambooSpotRandom() * Math.PI / 4;
+          const point = bambooCurve.getPointAt(t);
+          const tangent = bambooCurve.getTangentAt(t).normalize();
+          const radialA = new THREE.Vector3(0, 0, 1).cross(tangent).normalize();
+          const radialB = tangent.clone().cross(radialA).normalize();
+          const radial = radialA.multiplyScalar(Math.cos(angle))
+            .addScaledVector(radialB, Math.sin(angle))
+            .normalize();
+          const around = radial.clone().cross(tangent).normalize();
+          spot.position.copy(point).addScaledVector(radial, bambooRadius + 0.0015);
+          spot.quaternion.setFromRotationMatrix(
+            new THREE.Matrix4().makeBasis(tangent, around, radial)
+          );
+          spot.rotateZ((bambooSpotRandom() - 0.5) * 0.38);
+          spot.userData.axisX = point.x;
+          spot.userData.baseOpacity = SPOT_BASE_OPACITY;
+          spot.userData.sandingPasses = 0;
+          spot.userData.lastSandingSide = 0;
+          bamboo.add(spot);
+          bambooSpots.push(spot);
+        }
+        const sandingGuideMarkers = bambooSpots.map(() => {
+          const marker = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          marker.classList.add("sanding-guide-marker", "is-hidden");
+          const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          ring.classList.add("sanding-guide-ring");
+          ring.setAttribute("r", "10");
+          marker.appendChild(ring);
+          sandingGuideLayer.appendChild(marker);
+          return marker;
+        });
+        for (const t of nodePositions) {
+          const node = new THREE.Mesh(
+            new THREE.TorusGeometry(bambooRadius, 0.004, 8, 24),
+            bambooNodeMaterial
+          );
           const tangent = bambooCurve.getTangentAt(t).normalize();
           node.position.copy(bambooCurve.getPointAt(t));
-          node.userData.nodeIndex = index;
-          node.userData.removing = false;
+          node.quaternion.setFromUnitVectors(ringNormal, tangent);
+          node.castShadow = true;
           bamboo.add(node);
-          nodeGroups.push(node);
-
-          const nodeMaterial = bambooNodeMaterial.clone();
-          node.userData.materials = [nodeMaterial];
-
-          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.044, 0.004, 8, 24), nodeMaterial);
-          ring.quaternion.setFromUnitVectors(ringNormal, tangent);
-          ring.userData.nodeIndex = index;
-          ring.castShadow = true;
-          node.add(ring);
-
-          const hitTarget = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.16, 0.16, 0.24, 10),
-            nodeHitMaterial
-          );
-          hitTarget.quaternion.setFromUnitVectors(up, tangent);
-          hitTarget.userData.nodeIndex = index;
-          node.add(hitTarget);
         }
+
+        const SANDING_WIDTH = 0.56;
+        const SANDING_THICKNESS = 0.008;
+        const SANDING_WRAP_RADIUS = bambooRadius + SANDING_THICKNESS / 2 + 0.002;
+        const SANDING_HEIGHT = 2 * Math.PI * SANDING_WRAP_RADIUS;
+        const SANDING_SEGMENTS = 48;
+        const SANDING_FADE_DURATION = 0.32;
+        const sandingCenterY = bamboo.position.y;
+        const sandingStart = new THREE.Vector3(
+          bamboo.position.x + bambooLength / 2 + 0.08,
+          sandingCenterY,
+          bamboo.position.z + 0.44
+        );
+        const sapo = new THREE.Group();
+        sapo.position.copy(sandingStart);
+        scene.add(sapo);
+
+        const sapoSideMaterial = new THREE.MeshStandardMaterial({ color: 0xa49a89, roughness: 0.98 });
+        const sapoFrontMaterial = new THREE.MeshStandardMaterial({ color: 0xc2b9a7, roughness: 0.98 });
+        const sapoBackMaterial = new THREE.MeshStandardMaterial({ color: 0x4b4e4d, roughness: 0.98 });
+        const stripHeight = SANDING_HEIGHT / SANDING_SEGMENTS;
+        const stripGeometry = new THREE.BoxGeometry(
+          SANDING_WIDTH,
+          stripHeight + 0.0001,
+          SANDING_THICKNESS
+        );
+        const stripMaterials = [
+          sapoSideMaterial,
+          sapoSideMaterial,
+          sapoFrontMaterial,
+          sapoFrontMaterial,
+          sapoFrontMaterial,
+          sapoBackMaterial
+        ];
+        const sapoRows = [];
+        for (let index = 0; index < SANDING_SEGMENTS; index += 1) {
+          const row = new THREE.Group();
+          row.userData.flatY = -SANDING_HEIGHT / 2 + (index + 0.5) * stripHeight;
+          const strip = new THREE.Mesh(stripGeometry, stripMaterials);
+          strip.castShadow = true;
+          strip.receiveShadow = true;
+          row.add(strip);
+          sapo.add(row);
+          sapoRows.push(row);
+        }
+
+        const gritGeometry = new THREE.IcosahedronGeometry(1, 0);
+        const gritMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88 });
+        const gritMesh = new THREE.InstancedMesh(gritGeometry, gritMaterial, 160);
+        gritMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        gritMesh.castShadow = true;
+        gritMesh.receiveShadow = true;
+        sapo.add(gritMesh);
+
+        let gritSeed = 39271;
+        const gritRandom = () => {
+          gritSeed = (gritSeed * 16807) % 2147483647;
+          return (gritSeed - 1) / 2147483646;
+        };
+        const gritColors = [
+          new THREE.Color(0x242626),
+          new THREE.Color(0x303232),
+          new THREE.Color(0x3a3c3b)
+        ];
+        const gritDetails = [];
+        const gritDummy = new THREE.Object3D();
+        for (let row = 0; row < 8; row += 1) {
+          for (let column = 0; column < 20; column += 1) {
+            const cellWidth = SANDING_WIDTH / 20;
+            const cellHeight = SANDING_HEIGHT / 8;
+            const x = -SANDING_WIDTH / 2 + (column + 0.5 + (gritRandom() - 0.5) * 0.46) * cellWidth;
+            const y = -SANDING_HEIGHT / 2 + (row + 0.5 + (gritRandom() - 0.5) * 0.42) * cellHeight;
+            const depth = 0.0008 + gritRandom() * 0.0005;
+            const detail = {
+              position: new THREE.Vector3(x, y, -SANDING_THICKNESS / 2 - depth * 0.35),
+              scale: new THREE.Vector3(
+                0.006 + gritRandom() * 0.005,
+                0.005 + gritRandom() * 0.004,
+                depth
+              ),
+              rotation: new THREE.Quaternion().setFromEuler(
+                new THREE.Euler(0, 0, gritRandom() * Math.PI * 2)
+              )
+            };
+            gritDetails.push(detail);
+            gritMesh.setColorAt(
+              gritDetails.length - 1,
+              gritColors[Math.floor(gritRandom() * gritColors.length)]
+            );
+          }
+        }
+
+        const DUST_PARTICLE_COUNT = 256;
+        const DUST_BURST_COUNT = 32;
+        const dustColors = [
+          new THREE.Color(0xffe9b5),
+          new THREE.Color(0xfff6d8),
+          new THREE.Color(0xe2c893)
+        ];
+        const dustMesh = new THREE.InstancedMesh(
+          new THREE.IcosahedronGeometry(1, 0),
+          new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }),
+          DUST_PARTICLE_COUNT
+        );
+        dustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        dustMesh.frustumCulled = false;
+        scene.add(dustMesh);
+        const dustParticles = Array.from({ length: DUST_PARTICLE_COUNT }, () => ({
+          position: new THREE.Vector3(),
+          velocity: new THREE.Vector3(),
+          age: 0,
+          lifetime: 0,
+          size: 0,
+          active: false
+        }));
+        const dustDummy = new THREE.Object3D();
+        const dustPosition = new THREE.Vector3();
+        const dustNormal = new THREE.Vector3();
+        const dustAxis = new THREE.Vector3();
+        const dustSide = new THREE.Vector3();
+        const dustBurstCenter = new THREE.Vector3();
+        const dustQuaternion = new THREE.Quaternion();
+        let nextDustParticle = 0;
+        for (let index = 0; index < DUST_PARTICLE_COUNT; index += 1) {
+          dustDummy.scale.setScalar(0);
+          dustDummy.updateMatrix();
+          dustMesh.setMatrixAt(index, dustDummy.matrix);
+          dustMesh.setColorAt(index, dustColors[index % dustColors.length]);
+        }
+        dustMesh.instanceMatrix.needsUpdate = true;
+
+        const cameraFocus = new THREE.Vector3(
+          bamboo.position.x - 0.5,
+          bamboo.position.y + 0.25,
+          bamboo.position.z
+        );
+        const cameraFrameWidth = 5.3;
+        const cameraPitch = THREE.MathUtils.degToRad(18);
 
         function resize() {
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
-          camera.position.set(0, 6.75, 10.8);
-          camera.lookAt(0, 1.05, 0);
+          camera.fov = camera.aspect < 0.8 ? 52 : 36;
+          const halfHorizontalFov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+          const distance = cameraFrameWidth / (2 * halfHorizontalFov);
+          camera.position.copy(cameraFocus).add(new THREE.Vector3(
+            0,
+            distance * Math.sin(cameraPitch),
+            distance * Math.cos(cameraPitch)
+          ));
+          camera.lookAt(cameraFocus);
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
+          sandingGuideLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        }
+
+        function updateSandingGuides() {
+          camera.updateMatrixWorld(true);
+          for (let index = 0; index < bambooSpots.length; index += 1) {
+            const spot = bambooSpots[index];
+            const marker = sandingGuideMarkers[index];
+            if (!spot.visible) {
+              marker.classList.add("is-hidden");
+              continue;
+            }
+
+            spot.getWorldPosition(guideWorldPosition);
+            spot.getWorldQuaternion(guideQuaternion);
+            guideNormal.set(0, 0, 1).applyQuaternion(guideQuaternion);
+            guideToCamera.subVectors(camera.position, guideWorldPosition).normalize();
+            if (guideNormal.dot(guideToCamera) <= 0) {
+              marker.classList.add("is-hidden");
+              continue;
+            }
+
+            guideScreenPosition.copy(guideWorldPosition).project(camera);
+            if (
+              guideScreenPosition.z < -1
+              || guideScreenPosition.z > 1
+              || Math.abs(guideScreenPosition.x) > 1
+              || Math.abs(guideScreenPosition.y) > 1
+            ) {
+              marker.classList.add("is-hidden");
+              continue;
+            }
+
+            marker.classList.remove("is-hidden");
+            marker.setAttribute(
+              "transform",
+              `translate(${(guideScreenPosition.x * 0.5 + 0.5) * host.clientWidth} ${(1 - (guideScreenPosition.y * 0.5 + 0.5)) * host.clientHeight})`
+            );
+          }
         }
 
         function updateProgress() {
-          const percent = removedCount / NODE_TOTAL * 100;
-          nodeCountLabel.innerHTML = `${removedCount}<small> / ${NODE_TOTAL}</small>`;
+          let progress = 0;
+          for (const spot of bambooSpots) {
+            progress += 1 - spot.material.opacity / spot.userData.baseOpacity;
+          }
+          const percent = progress / SPOT_TOTAL * 100;
+          cleanedSpotCount = bambooSpots.filter((spot) => !spot.visible).length;
+          nodeCountLabel.innerHTML = `${cleanedSpotCount}<small> / ${SPOT_TOTAL}</small>`;
           progressFill.style.width = `${percent}%`;
-          progressTrack.setAttribute("aria-valuenow", String(removedCount));
-          if (removedCount === 0) {
-            progressHint.textContent = "돌출된 마디를 하나씩 클릭하세요";
-            progressState.textContent = "다듬기 준비";
-          } else if (removedCount < NODE_TOTAL) {
-            progressHint.textContent = "좋아요. 남은 마디를 계속 다듬어주세요";
-            progressState.textContent = "다듬는 중";
+          progressTrack.setAttribute("aria-valuenow", String(cleanedSpotCount));
+          if (percent <= 0.01) {
+            progressHint.textContent = "사포를 잡고 대나무를 따라 두 번 쓸어주세요";
+            progressState.textContent = "연마 준비";
+          } else if (cleanedSpotCount < SPOT_TOTAL) {
+            progressHint.textContent = "좋아요. 남은 부분도 두 번씩 쓸어주세요";
+            progressState.textContent = "연마 중";
           } else {
-            progressHint.textContent = "모든 마디를 다듬었습니다";
+            progressHint.textContent = "대나무 표면을 다듬었습니다";
             progressState.textContent = "마무리 중";
           }
         }
@@ -738,6 +1059,30 @@
         function setInstruction(text) {
           instruction.textContent = text;
         }
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        const dragPlane = new THREE.Plane(
+          new THREE.Vector3(0, 1, 0),
+          -sandingCenterY
+        );
+        const pointerWorld = new THREE.Vector3();
+        const dragOffset = new THREE.Vector3();
+        const sapoTarget = {
+          x: sandingStart.x,
+          y: sandingStart.y,
+          z: sandingStart.z
+        };
+        const sapoPickTargets = sapoRows.map((row) => row.children[0]);
+        const clock = new THREE.Clock();
+        const bambooAxis = new THREE.Vector3(1, 0, 0);
+        const flatQuaternion = new THREE.Quaternion();
+        const bendQuaternion = new THREE.Quaternion();
+        const gritQuaternion = new THREE.Quaternion();
+        const bendBasis = new THREE.Matrix4();
+        const bendTangent = new THREE.Vector3();
+        const bendRadial = new THREE.Vector3();
+        const bentPosition = new THREE.Vector3();
 
         function updatePointer(event) {
           const rect = renderer.domElement.getBoundingClientRect();
@@ -748,103 +1093,274 @@
           raycaster.setFromCamera(pointer, camera);
         }
 
-        function findNodeAtPointer() {
-          if (phase !== "playing") return null;
-          const activeNodes = nodeGroups.filter((node) => node.visible && !node.userData.removing);
-          if (activeNodes.length === 0) return null;
-          const intersections = raycaster.intersectObjects(activeNodes, true);
-          if (intersections.length === 0) return null;
-          const nodeIndex = intersections[0].object.userData.nodeIndex;
-          return Number.isInteger(nodeIndex) ? nodeGroups[nodeIndex] : null;
+        function updateSapoGeometry() {
+          for (const row of sapoRows) {
+            const theta = row.userData.flatY / SANDING_HEIGHT * Math.PI * 2;
+            const wrappedY = SANDING_WRAP_RADIUS * Math.sin(theta);
+            const wrappedZ = SANDING_WRAP_RADIUS * Math.cos(theta);
+            row.position.set(
+              0,
+              THREE.MathUtils.lerp(row.userData.flatY, wrappedY, sapoBendAmount),
+              THREE.MathUtils.lerp(0, wrappedZ, sapoBendAmount)
+            );
+            row.rotation.x = -theta * sapoBendAmount;
+          }
+
+          for (let index = 0; index < gritDetails.length; index += 1) {
+            const detail = gritDetails[index];
+            const theta = detail.position.y / SANDING_HEIGHT * Math.PI * 2;
+            const sine = Math.sin(theta);
+            const cosine = Math.cos(theta);
+            const radius = SANDING_WRAP_RADIUS + detail.position.z;
+            bentPosition.set(
+              detail.position.x,
+              radius * sine,
+              radius * cosine
+            );
+            gritDummy.position.set(
+              detail.position.x,
+              THREE.MathUtils.lerp(detail.position.y, bentPosition.y, sapoBendAmount),
+              THREE.MathUtils.lerp(detail.position.z, bentPosition.z, sapoBendAmount)
+            );
+            bendTangent.set(0, cosine, -sine);
+            bendRadial.set(0, sine, cosine);
+            bendBasis.makeBasis(bambooAxis, bendTangent, bendRadial);
+            bendQuaternion.setFromRotationMatrix(bendBasis);
+            gritQuaternion.identity()
+              .slerp(bendQuaternion, sapoBendAmount)
+              .multiply(detail.rotation);
+            gritDummy.quaternion.copy(gritQuaternion);
+            gritDummy.scale.copy(detail.scale);
+            gritDummy.updateMatrix();
+            gritMesh.setMatrixAt(index, gritDummy.matrix);
+          }
+          gritMesh.instanceMatrix.needsUpdate = true;
         }
 
-        function updateHover(node) {
-          if (hoveredNode === node) return;
-          hoveredNode = node;
-          for (const currentNode of nodeGroups) {
-            const active = currentNode === hoveredNode && !currentNode.userData.removing;
-            for (const material of currentNode.userData.materials) {
-              material.emissive.setHex(active ? 0x364d20 : 0x000000);
-              material.emissiveIntensity = active ? 0.55 : 0.08;
+        function emitBambooDust(spot) {
+          spot.getWorldQuaternion(dustQuaternion);
+          dustAxis.set(1, 0, 0).applyQuaternion(dustQuaternion).normalize();
+          dustSide.set(0, 1, 0).applyQuaternion(dustQuaternion).normalize();
+          dustNormal.set(0, 0, 1).applyQuaternion(dustQuaternion).normalize();
+          dustBurstCenter.set(sapoTarget.x, bamboo.position.y, bamboo.position.z)
+            .addScaledVector(dustNormal, bambooRadius + 0.008);
+
+          for (let particleIndex = 0; particleIndex < DUST_BURST_COUNT; particleIndex += 1) {
+            const index = nextDustParticle;
+            nextDustParticle = (nextDustParticle + 1) % DUST_PARTICLE_COUNT;
+            const particle = dustParticles[index];
+            const random = Math.random;
+            const angle = random() * Math.PI * 2;
+            const spreadX = Math.cos(angle);
+            const spreadSide = Math.sin(angle);
+            const originRadius = Math.sqrt(random()) * 0.09;
+            particle.position.copy(dustBurstCenter)
+              .addScaledVector(dustAxis, spreadX * originRadius)
+              .addScaledVector(dustSide, spreadSide * originRadius)
+              .addScaledVector(dustNormal, (random() - 0.5) * 0.016);
+            particle.velocity.copy(dustAxis)
+              .multiplyScalar(spreadX * (0.07 + random() * 0.08))
+              .addScaledVector(dustSide, spreadSide * (0.07 + random() * 0.08))
+              .addScaledVector(dustNormal, 0.05 + random() * 0.09);
+            particle.velocity.y += 0.025 + random() * 0.04;
+            particle.age = 0;
+            particle.lifetime = 0.65 + random() * 0.4;
+            particle.size = 0.008 + random() * 0.009;
+            particle.active = true;
+            dustMesh.setColorAt(
+              index,
+              dustColors[Math.floor(random() * dustColors.length)]
+            );
+          }
+          dustMesh.instanceColor.needsUpdate = true;
+        }
+
+        function updateBambooDust(delta) {
+          for (let index = 0; index < dustParticles.length; index += 1) {
+            const particle = dustParticles[index];
+            if (particle.active) {
+              particle.age += delta;
+              if (particle.age >= particle.lifetime) {
+                particle.active = false;
+              } else {
+                particle.position.addScaledVector(particle.velocity, delta);
+                particle.velocity.y -= 0.16 * delta;
+              }
+            }
+
+            const fade = particle.active
+              ? 1 - particle.age / particle.lifetime
+              : 0;
+            dustDummy.position.copy(particle.position);
+            dustDummy.scale.setScalar(particle.size * fade);
+            dustDummy.updateMatrix();
+            dustMesh.setMatrixAt(index, dustDummy.matrix);
+          }
+          dustMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        function updateSapoPose() {
+          const bambooMinX = bamboo.position.x - bambooLength / 2;
+          const bambooMaxX = bamboo.position.x + bambooLength / 2;
+          const xAligned = sapoTarget.x + SANDING_WIDTH / 2 >= bambooMinX
+            && sapoTarget.x - SANDING_WIDTH / 2 <= bambooMaxX;
+          const yAligned = Math.abs(sapoTarget.y - bamboo.position.y) <= 0.001;
+          const wrapped = hasSapoBeenDragged && xAligned && yAligned;
+          sapoBendAmount = wrapped ? 1 : 0;
+          sapo.position.set(
+            sapoTarget.x,
+            sapoTarget.y,
+            wrapped ? bamboo.position.z : sapoTarget.z
+          );
+          updateSapoGeometry();
+        }
+
+        function applySandingPass(spot) {
+          if (spot.userData.sandingPasses >= 2) return;
+          const activeFade = sandingFades.findIndex((fade) => fade.spot === spot);
+          if (activeFade !== -1) sandingFades.splice(activeFade, 1);
+          spot.userData.sandingPasses += 1;
+          sandingFades.push({
+            spot,
+            elapsed: 0,
+            startOpacity: spot.material.opacity,
+            targetOpacity: spot.userData.baseOpacity
+              * Math.max(0, 1 - 0.7 * spot.userData.sandingPasses)
+          });
+          emitBambooDust(spot);
+        }
+
+        function registerSandingCrossings(previousX, currentX) {
+          if (Math.abs(currentX - previousX) < 0.0001) return;
+          for (const spot of bambooSpots) {
+            const spotX = bamboo.position.x + spot.userData.axisX;
+            const previousSide = spot.userData.lastSandingSide;
+            const currentSide = Math.sign(currentX - spotX);
+            if (currentSide === 0) continue;
+
+            if (previousSide === 0) {
+              if (Math.abs(previousX - spotX) <= SANDING_WIDTH / 2 + spot.scale.x) {
+                applySandingPass(spot);
+              }
+            } else if (currentSide !== previousSide) {
+              applySandingPass(spot);
+            }
+            spot.userData.lastSandingSide = currentSide;
+          }
+        }
+
+        function updateSandingFades(delta) {
+          for (let index = sandingFades.length - 1; index >= 0; index -= 1) {
+            const fade = sandingFades[index];
+            fade.elapsed = Math.min(fade.elapsed + delta, SANDING_FADE_DURATION);
+            const amount = fade.elapsed / SANDING_FADE_DURATION;
+            const eased = 1 - Math.pow(1 - amount, 3);
+            fade.spot.material.opacity = THREE.MathUtils.lerp(
+              fade.startOpacity,
+              fade.targetOpacity,
+              eased
+            );
+            if (amount >= 1) {
+              fade.spot.material.opacity = fade.targetOpacity;
+              if (fade.targetOpacity <= 0) fade.spot.visible = false;
+              sandingFades.splice(index, 1);
             }
           }
-          renderer.domElement.style.cursor = hoveredNode ? "pointer" : "default";
-        }
-
-        function showToast(message) {
-          toast.textContent = message;
-          toast.classList.add("is-visible");
-          window.clearTimeout(toastTimer);
-          toastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
-        }
-
-        function removeNode(node) {
-          if (phase !== "playing" || !node || node.userData.removing || !node.visible) return;
-          node.userData.removing = true;
-          node.userData.materials.forEach((material) => {
-            material.transparent = true;
-            material.opacity = 1;
-          });
-          removalAnimations.push({ node: node, elapsed: 0 });
-          removedCount += 1;
           updateProgress();
-
-          if (removedCount < NODE_TOTAL) {
-            setInstruction("마디를 잘 다듬고 있어요. 남은 부분도 클릭해주세요.");
-          } else {
-            phase = "finishing";
-            setInstruction("마지막 마디를 다듬고 있습니다.");
-          }
+          if (phase === "playing" && cleanedSpotCount === SPOT_TOTAL) finishStage();
         }
 
         function finishStage() {
           phase = "complete";
-          setInstruction("대나무 마디를 모두 다듬었습니다.");
+          sandingGuidesVisible = false;
+          sandingGuideLayer.classList.add("is-hidden");
+          setInstruction("대나무를 매끈하게 다듬었습니다.");
           completionScreen.classList.add("is-visible");
           renderer.domElement.style.cursor = "default";
         }
 
         function resetStage() {
           phase = "playing";
-          removedCount = 0;
-          hoveredNode = null;
-          removalAnimations.length = 0;
-          for (const node of nodeGroups) {
-            node.visible = true;
-            node.scale.set(1, 1, 1);
-            node.position.y = 0;
-            node.userData.removing = false;
-            node.userData.materials.forEach((material) => {
-              material.transparent = false;
-              material.opacity = 1;
-              material.emissive.setHex(0x000000);
-              material.emissiveIntensity = 0.08;
-            });
+          cleanedSpotCount = 0;
+          sandingGuidesVisible = true;
+          sandingGuideLayer.classList.remove("is-hidden");
+          sandingFades.length = 0;
+          isSapoDragging = false;
+          hasSapoBeenDragged = false;
+          sapoBendAmount = 0;
+          sapoTarget.x = sandingStart.x;
+          sapoTarget.y = sandingStart.y;
+          sapoTarget.z = sandingStart.z;
+          sapo.position.copy(sandingStart);
+          for (const spot of bambooSpots) {
+            spot.visible = true;
+            spot.material.opacity = spot.userData.baseOpacity;
+            spot.userData.sandingPasses = 0;
+            spot.userData.lastSandingSide = 0;
           }
+          for (const marker of sandingGuideMarkers) marker.classList.add("is-hidden");
+          for (const particle of dustParticles) particle.active = false;
           completionScreen.classList.remove("is-visible");
-          setInstruction("대나무에 돌출된 마디 부분을 하나씩 클릭하세요.");
+          setInstruction("사포를 대나무와 같은 높이로 맞추고 길이 방향으로 쓸어주세요.");
           updateProgress();
+          updateSapoGeometry();
+          updateSandingGuides();
           renderer.domElement.style.cursor = "default";
-          toast.classList.remove("is-visible");
         }
 
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        const clock = new THREE.Clock();
+        function beginSapoDrag(event) {
+          if (phase !== "playing" || isSapoDragging) return;
+          const hit = raycaster.intersectObjects(sapoPickTargets, false)[0];
+          if (!hit) return;
+          const point = raycaster.ray.intersectPlane(dragPlane, pointerWorld);
+          if (!point) return;
+          isSapoDragging = true;
+          dragOffset.set(sapoTarget.x - point.x, 0, sapoTarget.z - point.z);
+          for (const spot of bambooSpots) {
+            spot.userData.lastSandingSide = Math.sign(
+              sapoTarget.x - (bamboo.position.x + spot.userData.axisX)
+            );
+          }
+          renderer.domElement.setPointerCapture(event.pointerId);
+          renderer.domElement.style.cursor = "grabbing";
+          event.preventDefault();
+        }
 
-        renderer.domElement.addEventListener("pointermove", (event) => {
+        function moveSapo(event) {
           updatePointer(event);
-          updateHover(findNodeAtPointer());
-        });
+          if (!isSapoDragging) {
+            renderer.domElement.style.cursor =
+              raycaster.intersectObjects(sapoPickTargets, false).length > 0 ? "grab" : "default";
+            return;
+          }
+          const point = raycaster.ray.intersectPlane(dragPlane, pointerWorld);
+          if (!point) return;
+          const previousX = sapoTarget.x;
+          sapoTarget.x = THREE.MathUtils.clamp(point.x + dragOffset.x, -3.2, 3.2);
+          sapoTarget.z = THREE.MathUtils.clamp(point.z + dragOffset.z, -2.8, 3.8);
+          hasSapoBeenDragged = true;
+          registerSandingCrossings(previousX, sapoTarget.x);
+        }
 
-        renderer.domElement.addEventListener("pointerleave", () => updateHover(null));
+        function endSapoDrag(event) {
+          if (!isSapoDragging) return;
+          isSapoDragging = false;
+          for (const spot of bambooSpots) spot.userData.lastSandingSide = 0;
+          if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+            renderer.domElement.releasePointerCapture(event.pointerId);
+          }
+          renderer.domElement.style.cursor = "default";
+        }
 
+        renderer.domElement.addEventListener("pointermove", moveSapo);
         renderer.domElement.addEventListener("pointerdown", (event) => {
           if (phase !== "playing") return;
           updatePointer(event);
-          removeNode(findNodeAtPointer());
-          event.preventDefault();
+          beginSapoDrag(event);
         });
+        renderer.domElement.addEventListener("pointerup", endSapoDrag);
+        renderer.domElement.addEventListener("pointercancel", endSapoDrag);
+        renderer.domElement.addEventListener("lostpointercapture", endSapoDrag);
 
         document.getElementById("retry-button").addEventListener("click", resetStage);
         document.getElementById("next-button").addEventListener("click", () => {
@@ -854,35 +1370,27 @@
         function animate() {
           requestAnimationFrame(animate);
           const delta = Math.min(clock.getDelta(), 0.05);
-
-          for (let index = removalAnimations.length - 1; index >= 0; index -= 1) {
-            const animation = removalAnimations[index];
-            animation.elapsed += delta;
-            const amount = Math.min(animation.elapsed / 0.3, 1);
-            const eased = 1 - Math.pow(1 - amount, 3);
-            animation.node.scale.setScalar(1 - eased);
-            animation.node.position.y = Math.sin(amount * Math.PI) * 0.075;
-            animation.node.userData.materials.forEach((material) => {
-              material.opacity = 1 - eased;
-            });
-            if (amount >= 1) {
-              animation.node.visible = false;
-              removalAnimations.splice(index, 1);
-            }
+          if (phase === "playing") {
+            updateSapoPose();
+            updateSandingFades(delta);
           }
-
-          if (phase === "finishing" && removalAnimations.length === 0) finishStage();
+          if (sandingGuidesVisible) updateSandingGuides();
+          updateBambooDust(delta);
           renderer.render(scene, camera);
         }
 
         window.addEventListener("resize", resize);
         resize();
+        updateSapoGeometry();
         updateProgress();
+        updateSandingGuides();
         animate();
+        announceStageReady();
       })();
     }).catch((error) => {
       console.error("Three.js failed to load; the 3D trimming stage could not start.", error);
       errorScreen.classList.add("is-visible");
+      announceStageReady();
     });
   </script>
 </body>

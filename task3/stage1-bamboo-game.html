@@ -595,6 +595,18 @@
     #load-error.is-visible { display: grid; }
     #load-error p { max-width: 470px; line-height: 1.8; }
 
+    #stage-transition-curtain {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      background: #17211e;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+    }
+
+    #stage-transition-curtain.is-visible { opacity: 1; }
+
     @keyframes card-in {
       from { opacity: 0; transform: translateY(7px); }
       to { opacity: 1; transform: translateY(0); }
@@ -658,6 +670,7 @@
 <body>
   <div id="scene" aria-label="3D 대나무 공방 장면"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div id="stage-transition-curtain" aria-hidden="true"></div>
 
   <main id="interface">
     <header class="topbar">
@@ -1220,6 +1233,14 @@
         roughness: 0.6,
         metalness: 0.02
       });
+      const bambooSpotMaterial = new THREE.MeshStandardMaterial({
+        color: 0x75472f,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        roughness: 0.88,
+        metalness: 0
+      });
       const unheatedBambooColor = bambooMaterial.color.clone();
       const cookedBambooColor = new THREE.Color(0xc69b69);
       const unheatedNodeColor = bambooNodeMaterial.color.clone();
@@ -1227,6 +1248,7 @@
       function updateBambooColor(progress) {
         bambooMaterial.color.copy(unheatedBambooColor).lerp(cookedBambooColor, progress);
         bambooNodeMaterial.color.copy(unheatedNodeColor).lerp(cookedNodeColor, progress);
+        bambooSpotMaterial.opacity = progress * 0.86;
       }
 
       const bambooHitMaterial = new THREE.MeshBasicMaterial({
@@ -1294,6 +1316,30 @@
       bambooBody.receiveShadow = true;
       bamboo.add(bambooBody);
 
+      const bambooSpotGeometry = new THREE.SphereGeometry(1, 10, 8);
+      const bambooSpots = [];
+      let bambooSpotSeed = 57391;
+      const bambooSpotRandom = () => {
+        bambooSpotSeed = (bambooSpotSeed * 16807) % 2147483647;
+        return (bambooSpotSeed - 1) / 2147483646;
+      };
+      for (let index = 0; index < 24; index += 1) {
+        const mesh = new THREE.Mesh(bambooSpotGeometry, bambooSpotMaterial);
+        const depth = 0.003 + bambooSpotRandom() * 0.0015;
+        mesh.scale.set(
+          0.03 + bambooSpotRandom() * 0.015,
+          0.014 + bambooSpotRandom() * 0.007,
+          depth
+        );
+        bamboo.add(mesh);
+        bambooSpots.push({
+          mesh,
+          t: (index + 0.15 + bambooSpotRandom() * 0.7) / 24,
+          angle: bambooSpotRandom() * Math.PI * 2,
+          depth
+        });
+      }
+
       const bambooHitBody = new THREE.Mesh(
         new THREE.TubeGeometry(initialCurve, curveSegments, 0.19, 10, false),
         bambooHitMaterial
@@ -1317,6 +1363,21 @@
         bambooBody.geometry = new THREE.TubeGeometry(curve, curveSegments, bambooRadius, radialSegments, false);
         bambooHitBody.geometry.dispose();
         bambooHitBody.geometry = new THREE.TubeGeometry(curve, curveSegments, 0.19, 10, false);
+
+        for (const spot of bambooSpots) {
+          const point = curve.getPointAt(spot.t);
+          const tangent = curve.getTangentAt(spot.t).normalize();
+          const radialA = new THREE.Vector3(0, 0, 1).cross(tangent).normalize();
+          const radialB = tangent.clone().cross(radialA).normalize();
+          const radial = radialA.multiplyScalar(Math.cos(spot.angle))
+            .addScaledVector(radialB, Math.sin(spot.angle))
+            .normalize();
+          const around = radial.clone().cross(tangent).normalize();
+          const orientation = new THREE.Matrix4().makeBasis(tangent, around, radial);
+          spot.mesh.position.copy(point)
+            .addScaledVector(radial, bambooRadius - spot.depth * 0.25);
+          spot.mesh.quaternion.setFromRotationMatrix(orientation);
+        }
 
         for (const node of bambooNodes) {
           node.mesh.position.copy(curve.getPointAt(node.t));
@@ -1485,12 +1546,14 @@
         camera.aspect = width / height;
         const compactLayout = camera.aspect < 0.8;
         camera.fov = compactLayout ? 52 : 36;
-        camera.position.set(
-          compactLayout ? 10.8 : 0,
-          6.75,
-          compactLayout ? 0 : 10.8
-        );
-        camera.lookAt(0, 1.05, 0);
+        if (!isStageTransitionActive) {
+          camera.position.set(
+            compactLayout ? 10.8 : 0,
+            6.75,
+            compactLayout ? 0 : 10.8
+          );
+          camera.lookAt(0, 1.05, 0);
+        }
         if (phase === "idle") bamboo.rotation.y = BAMBOO_START_YAW;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height, false);
@@ -1797,6 +1860,7 @@
         finalStraightenProgress = 1;
         updateBambooGeometry(1);
         completeScreen.classList.add("is-visible");
+        nextButton.disabled = false;
         setInstruction("대나무를 완전히 곧게 폈습니다.");
       }
 
@@ -1836,6 +1900,7 @@
         updateBambooGeometry(1, false);
         updateBambooColor(0);
         completeScreen.classList.remove("is-visible");
+        nextButton.disabled = true;
         gaugeCard.classList.remove("is-hidden");
         fireMarker.classList.remove("is-hot");
         gaugeHint.textContent = "대나무를 원통 안에 넣어주세요";
@@ -1931,15 +1996,78 @@
       renderer.domElement.addEventListener("lostpointercapture", endDrag);
 
       document.getElementById("retry-button").addEventListener("click", resetGame);
-      document.getElementById("next-button").addEventListener("click", () => {
-        window.location.href = "stage2.html";
-      });
+      const nextButton = document.getElementById("next-button");
+      nextButton.addEventListener("click", startStageTransition);
 
       const clock = new THREE.Clock();
+      const STAGE_TRANSITION_DURATION = 1.15;
+      const stageTransitionStartPosition = new THREE.Vector3();
+      const stageTransitionEndPosition = new THREE.Vector3();
+      const stageTransitionStartTarget = new THREE.Vector3();
+      const stageTransitionEndTarget = new THREE.Vector3(-0.5, TABLE_TOP + 0.306, 1.28);
+      const stageTransitionTarget = new THREE.Vector3();
+      const stageTransitionDirection = new THREE.Vector3();
+      const stageTransitionOffset = new THREE.Vector3();
+      let stageTransitionClock = 0;
+      let isStageTransitionActive = false;
+
       function easeInOutCubic(value) {
         return value < 0.5
           ? 4 * value * value * value
           : 1 - Math.pow(-2 * value + 2, 3) / 2;
+      }
+
+      function startStageTransition() {
+        if (isStageTransitionActive) return;
+        isStageTransitionActive = true;
+        stageTransitionClock = 0;
+        stageTransitionStartPosition.copy(camera.position);
+        camera.getWorldDirection(stageTransitionDirection);
+        stageTransitionStartTarget.copy(camera.position)
+          .addScaledVector(stageTransitionDirection, 10);
+
+        const distance = 5.3 / (
+          2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect
+        );
+        stageTransitionOffset.set(
+          0,
+          distance * Math.sin(THREE.MathUtils.degToRad(18)),
+          distance * Math.cos(THREE.MathUtils.degToRad(18))
+        );
+        stageTransitionEndPosition.copy(stageTransitionEndTarget).add(stageTransitionOffset);
+        nextButton.disabled = true;
+      }
+
+      function updateStageTransition(delta) {
+        if (!isStageTransitionActive) return;
+        stageTransitionClock = Math.min(
+          stageTransitionClock + delta,
+          STAGE_TRANSITION_DURATION
+        );
+        const amount = easeInOutCubic(stageTransitionClock / STAGE_TRANSITION_DURATION);
+        camera.position.lerpVectors(
+          stageTransitionStartPosition,
+          stageTransitionEndPosition,
+          amount
+        );
+        camera.lookAt(
+          stageTransitionTarget.lerpVectors(
+            stageTransitionStartTarget,
+            stageTransitionEndTarget,
+            amount
+          )
+        );
+        if (stageTransitionClock >= STAGE_TRANSITION_DURATION) {
+          isStageTransitionActive = false;
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: "stage-navigation", stage: "stage2" }, "*");
+          } else {
+            document.getElementById("stage-transition-curtain").classList.add("is-visible");
+            window.setTimeout(() => {
+              window.location.href = "stage2.html";
+            }, 300);
+          }
+        }
       }
 
       function interpolateAngle(start, end, amount) {
@@ -2066,6 +2194,7 @@
         const delta = Math.min(clock.getDelta(), 0.05);
         animationClock += delta;
         updateAssetTransition(delta);
+        updateStageTransition(delta);
 
         const flicker = Math.sin(animationClock * 8) * 0.045 + Math.sin(animationClock * 13) * 0.025;
         fireGroup.scale.set(0.4 * (1 + flicker), 0.4 * (1 + flicker * 1.6), 0.4 * (1 + flicker));
