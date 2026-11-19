@@ -883,6 +883,7 @@
       const BRAZIER_SCALE_X = 2 / 3;
       const TUBE_ENTRY_LOCAL_X = -BRAZIER_LENGTH / 2 + 0.45;
       const TUBE_ENTRY_SNAP_RADIUS_PX = 20;
+      const BAMBOO_RECOGNITION_SEGMENTS = 16;
       const BAMBOO_ORBIT_RADIUS_PX = 2;
       const BAMBOO_ORBIT_FREQUENCY_HZ = 1;
       const MAX_LOCAL_STRAIGHTENING = 0.3;
@@ -1525,7 +1526,11 @@
         ));
         const targetScreenPosition = projectWorldPosition(targetWorldPosition, rect)
           .sub(new THREE.Vector2(rect.left, rect.top));
-        const bambooEndPositions = getBambooEndScreenPositions(rect)
+        const bambooScreenPositions = getBambooScreenPositions(rect);
+        const bambooEndPositions = [
+          bambooScreenPositions[0],
+          bambooScreenPositions[bambooScreenPositions.length - 1]
+        ]
           .map((position) => position.sub(new THREE.Vector2(rect.left, rect.top)));
         const grabPosition = bambooEndPositions.reduce((closest, position) => (
           position.distanceTo(targetScreenPosition) < closest.distanceTo(targetScreenPosition)
@@ -1647,12 +1652,11 @@
           .addScaledVector(bambooOrbitAxisV, coefficientV);
       }
 
-      function getBambooEndScreenPositions(rect) {
+      function getBambooScreenPositions(rect) {
         scene.updateMatrixWorld(true);
-        return bambooEnds.map((end) => projectWorldPosition(
-          end.getWorldPosition(new THREE.Vector3()),
-          rect
-        ));
+        return makeBambooCurve(bendAmount, bambooInTube)
+          .getPoints(BAMBOO_RECOGNITION_SEGMENTS)
+          .map((point) => projectWorldPosition(bamboo.localToWorld(point), rect));
       }
 
       function distanceToSegment(point, start, end) {
@@ -1672,17 +1676,30 @@
         );
       }
 
-      function isBambooTipNearTubeOpening(previousPositions, currentPositions, rect) {
+      function isBambooNearTubeOpening(previousPositions, currentPositions, rect) {
         const openingPosition = brazier.localToWorld(new THREE.Vector3(
           -BRAZIER_LENGTH / 2,
           BRAZIER_BOTTOM + BRAZIER_OPENING_HEIGHT,
           0
         ));
         const openingScreenPosition = projectWorldPosition(openingPosition, rect);
-        return currentPositions.some((position, index) => (
-          distanceToSegment(openingScreenPosition, previousPositions[index], position)
-            <= TUBE_ENTRY_SNAP_RADIUS_PX
-        ));
+        for (let index = 0; index < currentPositions.length; index += 1) {
+          if (distanceToSegment(
+            openingScreenPosition,
+            previousPositions[index],
+            currentPositions[index]
+          ) <= TUBE_ENTRY_SNAP_RADIUS_PX) {
+            return true;
+          }
+          if (index < currentPositions.length - 1 && distanceToSegment(
+            openingScreenPosition,
+            currentPositions[index],
+            currentPositions[index + 1]
+          ) <= TUBE_ENTRY_SNAP_RADIUS_PX) {
+            return true;
+          }
+        }
+        return false;
       }
 
       function isInTubeCorridor(localPosition) {
@@ -1860,15 +1877,15 @@
         const point = pointOnDragPlane(event, dragPoint);
         if (!point) return;
         const canvasRect = renderer.domElement.getBoundingClientRect();
-        const previousEndpointPositions = getBambooEndScreenPositions(canvasRect);
+        const previousBambooPositions = getBambooScreenPositions(canvasRect);
         bamboo.position.x = THREE.MathUtils.clamp(point.x + dragOffset.x, -3.08, 3.08);
         bamboo.position.z = THREE.MathUtils.clamp(point.z + dragOffset.z, -1.75, 1.75);
         camera.updateMatrixWorld(true);
-        const currentEndpointPositions = getBambooEndScreenPositions(canvasRect);
+        const currentBambooPositions = getBambooScreenPositions(canvasRect);
         let localPosition = getBambooLocalPosition();
-        if (!bambooInTube && isBambooTipNearTubeOpening(
-          previousEndpointPositions,
-          currentEndpointPositions,
+        if (!bambooInTube && isBambooNearTubeOpening(
+          previousBambooPositions,
+          currentBambooPositions,
           canvasRect
         )) {
           snapBambooToTube();
