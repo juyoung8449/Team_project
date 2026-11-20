@@ -113,3 +113,42 @@ function createBambooInk(THREE, bamboo, { painted = false } = {}) {
   });
   return { width, centers, segmentCount, segmentAngle, areas };
 }
+
+function createBambooGlue(THREE, bamboo, ink, { painted = false } = {}) {
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x89502d,
+    roughness: 0.72,
+    metalness: 0
+  });
+  const ends = [bamboo.start, bamboo.end].map((x) => {
+    const end = new THREE.Mesh(new THREE.SphereGeometry(bamboo.radius, 18, 12), material);
+    end.position.x = x;
+    end.visible = painted;
+    end.castShadow = true;
+    end.receiveShadow = true;
+    bamboo.group.add(end);
+    return end;
+  });
+  const bounds = [
+    [bamboo.start, ink.centers[0] - ink.width / 2],
+    [ink.centers[1] + ink.width / 2, bamboo.end]
+  ];
+  const axis = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(1, 0, 0)
+  );
+  const bands = bounds.map(([start, end]) => {
+    const band = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.045, end - start, 32, 1),
+      material
+    );
+    band.position.x = (start + end) / 2;
+    band.quaternion.copy(axis);
+    band.visible = painted;
+    band.castShadow = true;
+    band.receiveShadow = true;
+    bamboo.group.add(band);
+    return band;
+  });
+  return { material, ends, bounds, bands };
+}

@@ -716,53 +716,21 @@
         const inkAsset = createBambooInk(THREE, bambooAsset, { painted: true });
         const bambooStart = bambooAsset.start;
         const bambooEnd = bambooAsset.end;
-        const inkBandWidth = inkAsset.width;
         const paintCenters = inkAsset.centers;
         const up = new THREE.Vector3(0, 1, 0);
         const xAxis = new THREE.Vector3(1, 0, 0);
         const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
 
-        const glueMaterial = new THREE.MeshStandardMaterial({
-          color: 0x89502d,
-          roughness: 0.72,
-          metalness: 0
-        });
-        const coatedEnds = [];
         for (let index = 0; index < 2; index += 1) {
           const x = index === 0 ? bambooStart : bambooEnd;
           bambooAsset.ends[index].visible = false;
           createBambooRoundedEnd(THREE, bambooAsset, x);
-
-          const coatedEnd = new THREE.Mesh(
-            new THREE.SphereGeometry(bambooAsset.radius, 18, 12),
-            glueMaterial
-          );
-          coatedEnd.position.x = x;
-          coatedEnd.visible = false;
-          coatedEnd.castShadow = true;
-          coatedEnd.receiveShadow = true;
-          bamboo.add(coatedEnd);
-          coatedEnds.push(coatedEnd);
         }
-
-        const coatingBounds = [
-          [bambooStart, paintCenters[0] - inkBandWidth / 2],
-          [paintCenters[1] + inkBandWidth / 2, bambooEnd]
-        ];
-        const coatingBands = [];
-        for (const [start, end] of coatingBounds) {
-          const coating = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, end - start, 32, 1),
-            glueMaterial
-          );
-          coating.position.x = (start + end) / 2;
-          coating.quaternion.copy(bodyAxis);
-          coating.visible = false;
-          coating.castShadow = true;
-          coating.receiveShadow = true;
-          bamboo.add(coating);
-          coatingBands.push(coating);
-        }
+        const glueAsset = createBambooGlue(THREE, bambooAsset, inkAsset);
+        const glueMaterial = glueAsset.material;
+        const coatedEnds = glueAsset.ends;
+        const coatingBounds = glueAsset.bounds;
+        const coatingBands = glueAsset.bands;
 
         const hitTargetMaterial = new THREE.MeshBasicMaterial({
           transparent: true,

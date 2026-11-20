@@ -9,7 +9,6 @@
       color-scheme: dark;
       --ink: #f2ead8;
       --gold: #d7ad6c;
-      --panel: rgba(25, 34, 31, .84);
       --line: rgba(232, 214, 174, .18);
     }
 
@@ -188,6 +187,99 @@
       letter-spacing: .015em;
     }
 
+    #trace-game {
+      position: fixed;
+      z-index: 3;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    #trace-game[hidden], #trace-help[hidden] { display: none; }
+    #trace-light[hidden], #trace-start[hidden] { display: none; }
+
+    #trace-help {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 5px);
+      transform: translateX(-50%);
+      min-height: 34px;
+      padding: 0 15px;
+      border: 1px solid rgba(232, 214, 174, .55);
+      border-radius: 999px;
+      background: rgba(25, 34, 31, .9);
+      color: #f2ead8;
+      font-size: 12px;
+      cursor: pointer;
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+
+    #trace-svg {
+      display: block;
+      width: 100%;
+      overflow: visible;
+      touch-action: none;
+      pointer-events: auto;
+      cursor: crosshair;
+    }
+
+    .trace-outline, .trace-track, .trace-progress, .trace-sweep {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .trace-outline {
+      stroke: rgba(224, 240, 232, .88);
+      stroke-width: 12;
+      filter: drop-shadow(0 0 2px rgba(255, 255, 255, .45));
+    }
+
+    .trace-track { stroke: rgba(15, 54, 64, .92); stroke-width: 10; }
+    .trace-progress { stroke: #b7ece2; stroke-width: 7; }
+    .trace-sweep { stroke: #fff; stroke-width: 3; filter: drop-shadow(0 0 4px white); }
+    #trace-light { fill: white; filter: drop-shadow(0 0 5px white); }
+    #trace-start {
+      fill: rgba(255, 255, 255, .08);
+      stroke: white;
+      stroke-width: 1.2;
+      filter: drop-shadow(0 0 3px white);
+      animation: trace-start-pulse 1.4s ease-in-out infinite;
+    }
+
+    .trace-frame.is-error { animation: trace-shake .64s linear; }
+    .trace-frame.is-error .trace-outline {
+      stroke: #ffc0c0;
+      filter: drop-shadow(0 0 6px #ff8585);
+    }
+
+    @keyframes trace-start-pulse {
+      0%, 100% { opacity: .55; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes trace-shake {
+      0%, 25%, 50%, 75%, 100% { transform: translateX(0); }
+      6.25%, 31.25%, 56.25%, 81.25% { transform: translateX(-5px); }
+      18.75%, 43.75%, 68.75%, 93.75% { transform: translateX(5px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #trace-start { animation: none; }
+    }
+
+    @media (max-width: 600px) {
+      .vignette {
+        background: linear-gradient(0deg, rgba(11, 17, 15, .78), transparent 34%, rgba(11, 17, 15, .4));
+      }
+      .intro { top: 105px; left: 24px; width: calc(100% - 48px); }
+      .eyebrow { margin-bottom: 12px; }
+      h1 { font-size: 28px; }
+      #instruction { margin-top: 12px; }
+      .gesture-note { margin-top: 12px; }
+      #trace-help { bottom: auto; top: calc(100% + 5px); }
+    }
+
     .cut-icon {
       display: grid;
       width: 31px;
@@ -198,91 +290,6 @@
       color: var(--gold);
       font-size: 14px;
     }
-
-    .bottom-area {
-      position: absolute;
-      right: 24px;
-      bottom: 30px;
-      left: 24px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .progress-card {
-      width: min(520px, 100%);
-      padding: 17px 21px 15px;
-      border: 1px solid rgba(221, 204, 163, .22);
-      border-radius: 14px;
-      background: var(--panel);
-      box-shadow: 0 18px 55px rgba(0, 0, 0, .28);
-      backdrop-filter: blur(16px);
-    }
-
-    .progress-head, .progress-label {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .progress-title {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      color: #e5dfce;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: .04em;
-    }
-
-    .progress-mark {
-      display: grid;
-      width: 21px;
-      height: 21px;
-      place-items: center;
-      border: 1px solid rgba(215, 173, 108, .45);
-      border-radius: 50%;
-      color: var(--gold);
-      font-family: Georgia, serif;
-      font-size: 11px;
-    }
-
-    #wrap-count {
-      color: #f1d5a5;
-      font-family: Georgia, serif;
-      font-size: 19px;
-    }
-
-    #wrap-count small {
-      margin-left: 2px;
-      color: #b8b5a7;
-      font-family: inherit;
-      font-size: 11px;
-    }
-
-    .progress-track {
-      height: 7px;
-      margin: 12px 0 10px;
-      overflow: hidden;
-      border-radius: 8px;
-      background: rgba(231, 220, 191, .12);
-    }
-
-    #progress-fill {
-      width: 0;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #849e6d, #d2ae6b);
-      box-shadow: 0 0 14px rgba(212, 174, 105, .35);
-      transition: width .3s ease;
-    }
-
-    .progress-label {
-      color: #aeb3a4;
-      font-size: 10px;
-      letter-spacing: .02em;
-    }
-
-    #progress-state { color: #d4bd8e; }
 
     #complete-screen {
       position: absolute;
@@ -450,28 +457,27 @@
     <section class="intro" aria-live="polite">
       <p class="eyebrow">STAGE 07 &nbsp; / &nbsp; IRON WIRE WRAPPING</p>
       <h1>쇠심줄을<br><em>대나무 양쪽에 감아주세요</em></h1>
-      <p id="instruction">늘어진 흰 실을 드래그해 양쪽 갈색 부분에 놓으세요.</p>
+      <p id="instruction">빛이 지나가는 방향을 보고 선을 따라 그려주세요.</p>
       <div class="gesture-note">
         <span class="cut-icon" aria-hidden="true">↻</span>
-        <span>흰 실을 잡아 갈색 부분에 놓으세요</span>
+        <span>시작점부터 끝까지 손을 떼지 않고 따라 그려주세요</span>
       </div>
     </section>
 
-    <section class="bottom-area" aria-live="polite">
-      <div class="progress-card">
-        <div class="progress-head">
-          <div class="progress-title"><span class="progress-mark" aria-hidden="true">Ⅶ</span><span>쇠심줄 감기</span></div>
-          <strong id="wrap-count">0<small> / 2</small></strong>
-        </div>
-        <div class="progress-track" role="progressbar" aria-label="쇠심줄 감기 진행도" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0">
-          <div id="progress-fill"></div>
-        </div>
-        <div class="progress-label">
-          <span id="progress-hint">흰 실을 대나무 양쪽 갈색 부분에 놓아주세요</span>
-          <span id="progress-state">감기 준비</span>
-        </div>
-      </div>
-    </section>
+    <div id="trace-game" hidden>
+      <button id="trace-help" type="button" hidden>도움받기</button>
+      <svg id="trace-svg" viewBox="0 8 170 112" aria-label="표시된 시작점부터 선을 따라 그리세요">
+        <circle id="trace-start-hit" fill="transparent" pointer-events="all"></circle>
+        <g class="trace-frame">
+          <path id="trace-outline" class="trace-outline"></path>
+          <path id="trace-track" class="trace-track"></path>
+          <path id="trace-progress" class="trace-progress"></path>
+          <path id="trace-sweep" class="trace-sweep"></path>
+          <circle id="trace-light" r="2.7" hidden></circle>
+          <circle id="trace-start" r="5.2" hidden></circle>
+        </g>
+      </svg>
+    </div>
 
     <section id="complete-screen" aria-modal="true" role="dialog" aria-labelledby="complete-title">
       <div class="complete-card">
@@ -493,6 +499,8 @@
     <p>3D 장면을 불러오지 못했습니다.<br>인터넷 연결을 확인한 뒤 페이지를 새로고침해주세요.</p>
   </div>
 
+  <script src="../additionalAssets/Bamboo.js"></script>
+  <script src="stage7-trace.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -501,13 +509,9 @@
 
         const host = document.getElementById("scene");
         const instruction = document.getElementById("instruction");
-        const wrapCountLabel = document.getElementById("wrap-count");
-        const progressFill = document.getElementById("progress-fill");
-        const progressTrack = document.querySelector(".progress-track");
-        const progressHint = document.getElementById("progress-hint");
-        const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
         const toast = document.getElementById("toast");
+        const traceElement = document.getElementById("trace-game");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -605,98 +609,25 @@
         addBox(table, [0.19, 0.15, 4.15], braceMaterial, [3.98, -0.25, 0]);
 
         const TABLE_TOP = 0.56;
-        const bambooLength = 3.5;
-        const cutLength = bambooLength / 12;
-        const bambooStart = -bambooLength / 2 + cutLength;
-        const bambooEnd = bambooLength / 2 - cutLength;
-        const inkBandWidth = 0.045;
-        const inkCenters = [bambooStart + 0.24, bambooEnd - 0.24];
-        const up = new THREE.Vector3(0, 1, 0);
-        const xAxis = new THREE.Vector3(1, 0, 0);
-        const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
-        const bamboo = new THREE.Group();
-        bamboo.position.set(0, TABLE_TOP + 0.0575, 1.28);
+        const bambooAsset = createBamboo(THREE, { cut: true });
+        const bamboo = bambooAsset.group;
+        bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
         scene.add(bamboo);
-
-        const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
-          metalness: 0.02
-        });
-        const inkMaterial = new THREE.MeshStandardMaterial({
-          color: 0x12130f,
-          roughness: 0.88,
-          metalness: 0
-        });
-        const glueMaterial = new THREE.MeshStandardMaterial({
-          color: 0x89502d,
-          roughness: 0.72,
-          metalness: 0
-        });
+        const inkAsset = createBambooInk(THREE, bambooAsset, { painted: true });
+        for (let index = 0; index < 2; index += 1) {
+          bambooAsset.ends[index].visible = false;
+          createBambooRoundedEnd(THREE, bambooAsset, index === 0 ? bambooAsset.start : bambooAsset.end);
+        }
+        const glueAsset = createBambooGlue(THREE, bambooAsset, inkAsset, { painted: true });
+        const coatingBounds = glueAsset.bounds;
         const threadMaterial = new THREE.MeshStandardMaterial({
           color: 0xf3efe4,
           roughness: 0.68,
           metalness: 0.02
         });
-        const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooEnd - bambooStart, 32, 1),
-          bambooMaterial
-        );
-        body.position.x = (bambooStart + bambooEnd) / 2;
-        body.quaternion.copy(bodyAxis);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        bamboo.add(body);
-
-        for (let index = 0; index < 2; index += 1) {
-          const x = index === 0 ? bambooStart : bambooEnd;
-          const roundedEnd = new THREE.Mesh(
-            new THREE.SphereGeometry(0.044, 18, 12),
-            glueMaterial
-          );
-          roundedEnd.position.x = x;
-          roundedEnd.castShadow = true;
-          roundedEnd.receiveShadow = true;
-          bamboo.add(roundedEnd);
-        }
-
-        const coatingBounds = [
-          [bambooStart, inkCenters[0] - inkBandWidth / 2],
-          [inkCenters[1] + inkBandWidth / 2, bambooEnd]
-        ];
-        for (const [start, end] of coatingBounds) {
-          const coating = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, end - start, 32, 1),
-            glueMaterial
-          );
-          coating.position.x = (start + end) / 2;
-          coating.quaternion.copy(bodyAxis);
-          coating.castShadow = true;
-          coating.receiveShadow = true;
-          bamboo.add(coating);
-        }
-
-        const hitTargetMaterial = new THREE.MeshBasicMaterial({
-          transparent: true,
-          opacity: 0,
-          colorWrite: false,
-          depthWrite: false
-        });
-        const wrapTargets = [];
         const wrapGroups = [];
         const looseThreads = [];
-        const threadOrigins = [];
-        for (let index = 0; index < inkCenters.length; index += 1) {
-          const hitTarget = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.22, 0.22, 0.36, 12),
-            hitTargetMaterial
-          );
-          hitTarget.position.x = inkCenters[index];
-          hitTarget.quaternion.copy(bodyAxis);
-          hitTarget.userData.wrapIndex = index;
-          bamboo.add(hitTarget);
-          wrapTargets.push(hitTarget);
-
+        for (let index = 0; index < coatingBounds.length; index += 1) {
           const [start, end] = coatingBounds[index];
           const wrapCenter = (start + end) / 2;
           const wrapStart = index === 0 ? start : end;
@@ -745,88 +676,87 @@
           looseWire.userData.wrapIndex = index;
           looseWire.castShadow = true;
           threadGroup.add(looseWire);
-          const threadHitTarget = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.11, 0.11, 0.68, 10),
-            hitTargetMaterial
-          );
-          threadHitTarget.userData.wrapIndex = index;
-          threadGroup.add(threadHitTarget);
           looseThreads.push(threadGroup);
-          threadOrigins.push(threadGroup.position.clone());
         }
 
-        for (const x of inkCenters) {
-          const paintBand = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, inkBandWidth, 24, 1),
-            inkMaterial
-          );
-          paintBand.position.x = x;
-          paintBand.quaternion.copy(bodyAxis);
-          paintBand.castShadow = true;
-          paintBand.receiveShadow = true;
-          bamboo.add(paintBand);
+        const cameraDirection = new THREE.Vector3(0, 5.7, 10.8).normalize();
+        const cameraUp = new THREE.Vector3(0, cameraDirection.z, -cameraDirection.y);
+        const cameraFromPosition = new THREE.Vector3();
+        const cameraFromTarget = new THREE.Vector3();
+        const cameraToPosition = new THREE.Vector3();
+        const cameraToTarget = new THREE.Vector3();
+        const cameraTarget = new THREE.Vector3();
+        const cameraDuration = 1400;
+        const wrapAnimations = [];
+        const clock = new THREE.Clock();
+        let wrapCount = 0;
+        let phase = "moving";
+        let currentSide = 1;
+        let cameraFromSide = null;
+        let cameraProgress = 0;
+        let cameraStartTime = performance.now();
+        let toastTimer = 0;
+
+        function setStage6Pose(position, target) {
+          const halfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const distance = Math.max(7.5, 2.4 / (halfFov * camera.aspect * 0.9));
+          const halfWidth = distance * halfFov * camera.aspect;
+          target.set(Math.min(0.65, 2.75 - halfWidth * 0.92), TABLE_TOP + 0.056, 1.28);
+          target.addScaledVector(cameraUp, distance * halfFov * 0.28);
+          position.copy(target).addScaledVector(cameraDirection, distance);
+        }
+
+        function setSidePose(index, position, target) {
+          const halfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const coatingLength = coatingBounds[index][1] - coatingBounds[index][0];
+          const distance = Math.min(1.3, Math.max(0.8, coatingLength * host.clientHeight / (2 * halfFov * 150)));
+          const center = (coatingBounds[index][0] + coatingBounds[index][1]) / 2;
+          const mobile = window.innerWidth <= 600;
+          const screenX = mobile ? 0.5 : 0.67;
+          target.set(center + (0.5 - screenX) * 2 * distance * halfFov * camera.aspect, TABLE_TOP + 0.056, 1.28);
+          if (mobile) target.addScaledVector(cameraUp, distance * halfFov * 0.08);
+          position.copy(target).addScaledVector(cameraDirection, distance);
+        }
+
+        function updateCamera() {
+          camera.position.lerpVectors(cameraFromPosition, cameraToPosition, cameraProgress);
+          cameraTarget.lerpVectors(cameraFromTarget, cameraToTarget, cameraProgress);
+          camera.lookAt(cameraTarget);
+        }
+
+        function positionTraceGame() {
+          camera.updateMatrixWorld(true);
+          bamboo.updateWorldMatrix(true, false);
+          const rect = renderer.domElement.getBoundingClientRect();
+          const [start, end] = coatingBounds[currentSide];
+          const project = (x) => {
+            const point = bamboo.localToWorld(new THREE.Vector3(x, 0, 0)).project(camera);
+            return {
+              x: rect.left + (point.x + 1) * rect.width / 2,
+              y: rect.top + (1 - point.y) * rect.height / 2
+            };
+          };
+          const left = project(start);
+          const right = project(end);
+          traceElement.style.left = `${(left.x + right.x) / 2}px`;
+          traceElement.style.top = `${(left.y + right.y) / 2}px`;
+          traceElement.style.width = `${right.x - left.x}px`;
         }
 
         function resize() {
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
-          camera.position.set(0, 6.75, 10.8);
-          camera.lookAt(0, 1.05, 0);
+          if (cameraFromSide === null) {
+            setStage6Pose(cameraFromPosition, cameraFromTarget);
+          } else {
+            setSidePose(cameraFromSide, cameraFromPosition, cameraFromTarget);
+          }
+          setSidePose(currentSide, cameraToPosition, cameraToTarget);
+          updateCamera();
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
-        }
-
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(TABLE_TOP + 0.2));
-        const dragPoint = new THREE.Vector3();
-        const dragOffset = new THREE.Vector3();
-        const wrapAnimations = [];
-        const clock = new THREE.Clock();
-        let wrapCount = 0;
-        let phase = "playing";
-        let draggedThread = null;
-        let toastTimer = 0;
-
-        function updateProgress() {
-          const percent = wrapCount / wrapTargets.length * 100;
-          wrapCountLabel.innerHTML = `${wrapCount}<small> / ${wrapTargets.length}</small>`;
-          progressFill.style.width = `${percent}%`;
-          progressTrack.setAttribute("aria-valuenow", String(wrapCount));
-          if (wrapCount === 0) {
-            progressHint.textContent = "흰 실을 대나무 양쪽 갈색 부분에 놓아주세요";
-            progressState.textContent = "감기 준비";
-          } else if (wrapCount < wrapTargets.length) {
-            progressHint.textContent = "한쪽 실을 감았어요. 반대쪽도 감아주세요";
-            progressState.textContent = "감는 중";
-          } else {
-            progressHint.textContent = "대나무 양쪽에 쇠심줄을 모두 감았습니다";
-            progressState.textContent = "완료";
-          }
-        }
-
-        function updatePointer(event) {
-          const rect = renderer.domElement.getBoundingClientRect();
-          pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-          camera.updateMatrixWorld(true);
-          scene.updateMatrixWorld(true);
-          raycaster.setFromCamera(pointer, camera);
-        }
-
-        function findThreadAtPointer() {
-          const available = looseThreads.filter((thread) => thread.visible);
-          const intersections = raycaster.intersectObjects(available, true);
-          if (intersections.length === 0) return null;
-          return intersections[0].object.userData.wrapIndex;
-        }
-
-        function findWrapTargetAtPointer() {
-          const available = wrapTargets.filter((target) => !wrapGroups[target.userData.wrapIndex].visible);
-          const intersections = raycaster.intersectObjects(available, false);
-          if (intersections.length === 0) return null;
-          return intersections[0].object.userData.wrapIndex;
+          positionTraceGame();
         }
 
         function showToast(message) {
@@ -838,18 +768,23 @@
 
         function finishWrap(index) {
           wrapCount += 1;
-          updateProgress();
-          if (wrapCount === wrapTargets.length) {
+          if (wrapCount === wrapGroups.length) {
             phase = "complete";
             instruction.textContent = "대나무 양쪽에 쇠심줄을 감았습니다.";
             completionScreen.classList.add("is-visible");
           } else {
-            const sideText = index === 0 ? "왼쪽" : "오른쪽";
-            instruction.textContent = `${sideText}에 쇠심줄을 감았어요. 반대쪽 실도 드래그하세요.`;
+            phase = "moving";
+            cameraFromSide = index;
+            currentSide = 0;
+            cameraProgress = 0;
+            cameraStartTime = performance.now();
+            instruction.textContent = "오른쪽을 감았어요. 왼쪽으로 이동합니다.";
+            resize();
           }
         }
 
         function beginWrapping(index) {
+          phase = "wrapping";
           looseThreads[index].visible = false;
           wrapGroups[index].visible = true;
           wrapGroups[index].scale.setScalar(0.01);
@@ -857,86 +792,38 @@
           instruction.textContent = "실이 갈색 부분을 따라 감기고 있어요.";
         }
 
+        const traceGame = createTraceGame({
+          onComplete: () => beginWrapping(currentSide),
+          onMistake: (mistakes) => {
+            instruction.textContent = mistakes >= 2
+              ? "시작점부터 다시 그리거나 도움받기를 눌러주세요."
+              : "선을 벗어났어요. 시작점부터 다시 따라 그려주세요.";
+            showToast("선을 따라 끝까지 이어서 그려주세요.");
+          }
+        });
+
         function resetStage() {
-          phase = "playing";
+          traceGame.reset();
+          phase = "moving";
           wrapCount = 0;
-          draggedThread = null;
+          currentSide = 1;
+          cameraFromSide = null;
+          cameraProgress = 0;
+          cameraStartTime = performance.now();
           for (const animation of wrapAnimations) {
             wrapGroups[animation.index].visible = false;
           }
           wrapAnimations.length = 0;
           for (let index = 0; index < looseThreads.length; index += 1) {
-            looseThreads[index].position.copy(threadOrigins[index]);
             looseThreads[index].visible = true;
             wrapGroups[index].visible = false;
             wrapGroups[index].scale.setScalar(1);
           }
           completionScreen.classList.remove("is-visible");
-          instruction.textContent = "늘어진 흰 실을 드래그해 양쪽 갈색 부분에 놓으세요.";
-          updateProgress();
-          renderer.domElement.style.cursor = "default";
+          instruction.textContent = "빛이 지나가는 방향을 보고 선을 따라 그려주세요.";
           toast.classList.remove("is-visible");
+          resize();
         }
-
-        renderer.domElement.addEventListener("pointermove", (event) => {
-          updatePointer(event);
-          if (draggedThread !== null) {
-            if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
-              const thread = looseThreads[draggedThread];
-              thread.position.x = dragPoint.x + dragOffset.x;
-              thread.position.z = dragPoint.z + dragOffset.z;
-            }
-            return;
-          }
-          renderer.domElement.style.cursor = findThreadAtPointer() !== null ? "grab" : "default";
-        });
-
-        renderer.domElement.addEventListener("pointerdown", (event) => {
-          if (phase !== "playing" || event.button !== 0) return;
-          updatePointer(event);
-          const threadIndex = findThreadAtPointer();
-          if (threadIndex === null) return;
-          if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) return;
-          draggedThread = threadIndex;
-          dragOffset.set(
-            looseThreads[threadIndex].position.x - dragPoint.x,
-            0,
-            looseThreads[threadIndex].position.z - dragPoint.z
-          );
-          renderer.domElement.setPointerCapture(event.pointerId);
-          renderer.domElement.style.cursor = "grabbing";
-          instruction.textContent = "흰 실을 해당 쪽의 갈색 부분에 놓으세요.";
-          event.preventDefault();
-        });
-
-        renderer.domElement.addEventListener("pointerup", (event) => {
-          if (draggedThread === null) return;
-          updatePointer(event);
-          const threadIndex = draggedThread;
-          const targetIndex = findWrapTargetAtPointer();
-          draggedThread = null;
-          if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-            renderer.domElement.releasePointerCapture(event.pointerId);
-          }
-          if (targetIndex !== threadIndex) {
-            looseThreads[threadIndex].position.copy(threadOrigins[threadIndex]);
-            if (targetIndex !== null) {
-              showToast("각 실을 같은 쪽의 갈색 부분에 놓아주세요.");
-            } else {
-              showToast("갈색으로 칠해진 부분에 실을 놓아주세요.");
-            }
-            return;
-          }
-          beginWrapping(threadIndex);
-          event.preventDefault();
-        });
-
-        renderer.domElement.addEventListener("pointercancel", () => {
-          if (draggedThread !== null) {
-            looseThreads[draggedThread].position.copy(threadOrigins[draggedThread]);
-          }
-          draggedThread = null;
-        });
 
         document.getElementById("retry-button").addEventListener("click", resetStage);
         document.getElementById("next-button").addEventListener("click", () => {
@@ -945,9 +832,21 @@
 
         window.addEventListener("resize", resize);
         resize();
-        updateProgress();
         renderer.setAnimationLoop(() => {
+          const now = performance.now();
           const delta = Math.min(clock.getDelta(), 0.05);
+          if (phase === "moving") {
+            const progress = Math.min((now - cameraStartTime) / cameraDuration, 1);
+            cameraProgress = THREE.MathUtils.smoothstep(progress, 0, 1);
+            updateCamera();
+            if (progress === 1) {
+              phase = "tracing";
+              instruction.textContent = "빛이 지나가는 방향을 보고 선을 따라 그려주세요.";
+              positionTraceGame();
+              traceGame.start();
+            }
+          }
+          traceGame.update(now);
           for (let index = wrapAnimations.length - 1; index >= 0; index -= 1) {
             const animation = wrapAnimations[index];
             animation.elapsed += delta;
