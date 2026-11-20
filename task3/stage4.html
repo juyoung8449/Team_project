@@ -51,6 +51,41 @@
         linear-gradient(0deg, rgba(11, 17, 15, .78), transparent 34%, rgba(11, 17, 15, .3));
     }
 
+    #rotation-hint {
+      position: fixed;
+      z-index: 2;
+      width: 130px;
+      color: #fff;
+      text-align: center;
+      font-size: 10px;
+      line-height: 1.4;
+      pointer-events: none;
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, .45));
+    }
+
+    #rotation-hint svg { display: block; width: 110px; height: 66px; margin: auto; }
+    #rotation-hint path {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    #rotation-hint .hint-arrow { stroke-dasharray: 5 6; }
+    #rotation-hint .hint-arrows { animation: hint-pulse 1.65s ease-in-out infinite; }
+    #rotation-hint .hint-hand { animation: hint-drag 2s ease-in-out infinite; }
+    @keyframes hint-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+    @keyframes hint-drag {
+      0%, 100% { transform: translateX(-10px); }
+      50% { transform: translateX(10px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #rotation-hint .hint-arrows, #rotation-hint .hint-hand { animation: none; }
+    }
+
     #interface {
       position: fixed;
       inset: 0;
@@ -203,10 +238,12 @@
       position: absolute;
       right: 24px;
       bottom: 30px;
-      left: 24px;
+      width: min(240px, 40vw);
       display: flex;
       justify-content: center;
     }
+
+    .desktop-layout .bottom-area { width: min(200px, 24vw); }
 
     .progress-card {
       width: min(520px, 100%);
@@ -216,6 +253,16 @@
       background: var(--panel);
       box-shadow: 0 18px 55px rgba(0, 0, 0, .28);
       backdrop-filter: blur(16px);
+    }
+
+    @media (max-width: 620px) and (orientation: portrait) {
+      .bottom-area { left: 24px; width: auto; }
+      .intro { top: 90px; left: 20px; width: calc(100% - 40px); }
+      .intro .eyebrow { margin-bottom: 8px; }
+      .intro h1 { font-size: 27px; line-height: 1.25; }
+      .intro h1 br { display: none; }
+      #instruction { min-height: 0; margin-top: 8px; font-size: 12px; }
+      .gesture-note { margin-top: 8px; }
     }
 
     .progress-head, .progress-label {
@@ -434,6 +481,22 @@
 <body>
   <div id="scene" aria-label="대나무 좌우에 먹금을 칠하는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div id="rotation-hint" hidden aria-hidden="true">
+    <svg viewBox="0 0 110 66">
+      <g class="hint-arrows">
+        <path class="hint-arrow" d="M 10 12 H 98"></path>
+        <path d="M 91 7 L 98 12 L 91 17"></path>
+      </g>
+      <g class="hint-hand">
+        <path d="M 45 42 V 25 A 3 3 0 0 1 51 25 V 35
+          C 52 32 56 32 57 35 C 59 32 63 33 63 36
+          C 66 34 69 36 69 40 V 46 C 69 54 64 59 56 59
+          H 52 C 47 59 45 57 43 53 L 39 46
+          C 37 42 41 40 44 43 Z"></path>
+      </g>
+    </svg>
+    <span>좌우로 밀어 돌리기</span>
+  </div>
 
   <main id="interface">
     <header class="topbar">
@@ -450,10 +513,10 @@
     <section class="intro" aria-live="polite">
       <p class="eyebrow">STAGE 04 &nbsp; / &nbsp; INK MARKING</p>
       <h1>대나무 양쪽을<br><em>먹금칠 해주세요</em></h1>
-      <p id="instruction">대나무 좌우를 차례로 클릭해 먹금을 칠하세요.</p>
+      <p id="instruction">먹 도구로 밝게 표시된 부분을 칠하고, 대나무를 돌려 한 바퀴를 채워주세요.</p>
       <div class="gesture-note">
         <span class="cut-icon" aria-hidden="true">墨</span>
-        <span>대나무 좌우를 각각 클릭하세요</span>
+        <span>먹 도구를 드래그하고 대나무를 돌려주세요</span>
       </div>
     </section>
 
@@ -467,7 +530,7 @@
           <div id="progress-fill"></div>
         </div>
         <div class="progress-label">
-          <span id="progress-hint">대나무 좌우를 클릭해 먹금을 칠해주세요</span>
+          <span id="progress-hint">밝은 부분을 따라 대나무 둘레를 칠해주세요</span>
           <span id="progress-state">먹금칠 준비</span>
         </div>
       </div>
@@ -494,6 +557,7 @@
   </div>
 
   <script src="../additionalAssets/Bamboo.js"></script>
+  <script src="../additionalAssets/muk.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -509,6 +573,7 @@
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
         const toast = document.getElementById("toast");
+        const rotationHint = document.getElementById("rotation-hint");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -622,96 +687,155 @@
         const bambooEnd = bambooAsset.end;
         const cutAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
 
-        const paintBandWidth = 0.045;
+        const paintBandWidth = 0.09;
         const paintCenters = [bambooStart + 0.24, bambooEnd - 0.24];
-        const paintMarkers = [];
-        const paintBands = [];
-        const hitTargetMaterial = new THREE.MeshBasicMaterial({
+        const paintSegmentCount = 48;
+        const segmentAngle = Math.PI * 2 / paintSegmentCount;
+        const guideMaterial = new THREE.LineBasicMaterial({
+          color: 0xffffff,
           transparent: true,
-          opacity: 0,
-          colorWrite: false,
+          opacity: 0.9,
           depthWrite: false
         });
-
-        for (let index = 0; index < paintCenters.length; index += 1) {
-          const marker = new THREE.Group();
-          marker.position.x = paintCenters[index];
-          marker.userData.markerIndex = index;
-          marker.userData.side = index === 0 ? "left" : "right";
-          marker.userData.painted = false;
-          marker.userData.materials = [];
-          bamboo.add(marker);
-          paintMarkers.push(marker);
-
-          const dotMaterial = new THREE.MeshStandardMaterial({
-            color: 0xe7bd72,
-            emissive: 0x6a3b12,
-            emissiveIntensity: 0.4,
-            roughness: 0.42,
-            metalness: 0.06
-          });
-          marker.userData.materials.push(dotMaterial);
-
-          const dotCount = 12;
-          for (let dotIndex = 0; dotIndex < dotCount; dotIndex += 1) {
-            const angle = dotIndex / dotCount * Math.PI * 2;
-            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), dotMaterial);
-            dot.position.set(0, Math.cos(angle) * 0.06, Math.sin(angle) * 0.06);
-            dot.userData.markerIndex = index;
-            dot.castShadow = true;
-            marker.add(dot);
+        const guideBandMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.2,
+          depthWrite: false
+        });
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const guideBandGeometry = new THREE.CylinderGeometry(0.046, 0.046, paintBandWidth, 32, 1, true);
+        const guidePositions = [];
+        for (let index = 0; index < 24; index += 1) {
+          for (const fraction of [0, 0.55]) {
+            const angle = (index + fraction) * Math.PI * 2 / 24;
+            guidePositions.push(0, Math.cos(angle) * 0.046, Math.sin(angle) * 0.046);
           }
+        }
+        const guideGeometry = new THREE.BufferGeometry();
+        guideGeometry.setAttribute("position", new THREE.Float32BufferAttribute(guidePositions, 3));
+        const paintAreas = paintCenters.map((center, index) => {
+          const guide = new THREE.Group();
+          guide.position.x = center;
+          guide.visible = index === 1;
+          const band = new THREE.Mesh(guideBandGeometry, guideBandMaterial);
+          band.quaternion.copy(cutAxis);
+          guide.add(band);
+          guide.add(new THREE.LineSegments(guideGeometry, guideMaterial));
+          bamboo.add(guide);
+          const segments = [];
+          for (let segment = 0; segment < paintSegmentCount; segment += 1) {
+            const mesh = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.045, 0.045, paintBandWidth, 1, 1, true,
+                segment * segmentAngle, segmentAngle),
+              inkMaterial
+            );
+            mesh.position.x = center;
+            mesh.quaternion.copy(cutAxis);
+            mesh.visible = false;
+            mesh.receiveShadow = true;
+            bamboo.add(mesh);
+            segments.push(mesh);
+          }
+          return { guide, segments, painted: 0 };
+        });
 
-          const hitTarget = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.2, 0.2, 0.42, 12),
-            hitTargetMaterial
-          );
-          hitTarget.quaternion.copy(cutAxis);
-          hitTarget.userData.markerIndex = index;
-          marker.add(hitTarget);
+        const mukAsset = createMuk(THREE);
+        const muk = mukAsset.group;
+        const mukScale = 0.5;
+        muk.scale.setScalar(mukScale);
+        muk.rotation.y = Math.PI;
+        muk.visible = false;
+        scene.add(muk);
+        const mukHitTarget = new THREE.Mesh(
+          new THREE.BoxGeometry(mukAsset.length, mukAsset.thickness + 0.08, mukAsset.width + 0.08),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, colorWrite: false, depthWrite: false })
+        );
+        muk.add(mukHitTarget);
 
-          const paintBand = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, paintBandWidth, 24, 1),
-            inkMaterial
-          );
-          paintBand.position.x = paintCenters[index];
-          paintBand.quaternion.copy(cutAxis);
-          paintBand.visible = false;
-          paintBand.castShadow = true;
-          paintBand.receiveShadow = true;
-          bamboo.add(paintBand);
-          paintBands.push(paintBand);
+        const cameraStartPosition = new THREE.Vector3(0, 6.75, 10.8);
+        const cameraStartTarget = new THREE.Vector3(0, 1.05, 0);
+        const cameraFocusPosition = new THREE.Vector3();
+        const cameraFocusTarget = new THREE.Vector3();
+        const cameraStartRotation = new THREE.Quaternion();
+        const cameraFocusRotation = new THREE.Quaternion();
+        const isMobile = (navigator.userAgentData && navigator.userAgentData.mobile)
+          || /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)
+          || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        let cameraProgress = 0;
+        let cameraFocusX = paintCenters[1];
+        let transitionStartX = cameraFocusX;
+        let transitionEndX = cameraFocusX;
+        let transitionStartedAt = 0;
+        camera.position.copy(cameraStartPosition);
+        camera.lookAt(cameraStartTarget);
+        cameraStartRotation.copy(camera.quaternion);
+
+        function updateCamera() {
+          camera.position.lerpVectors(cameraStartPosition, cameraFocusPosition, cameraProgress);
+          camera.quaternion.slerpQuaternions(cameraStartRotation, cameraFocusRotation, cameraProgress);
         }
 
         function resize() {
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
-          camera.position.set(0, 6.75, 10.8);
-          camera.lookAt(0, 1.05, 0);
+          const halfViewAngle = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const distance = Math.max(3.2, (bambooEnd - bambooStart) / (1.7 * halfViewAngle * camera.aspect)) / 3.75;
+          const desktopLayout = !isMobile && width >= 700;
+          document.getElementById("interface").classList.toggle("desktop-layout", desktopLayout);
+          restPointer.x = desktopLayout ? 0.39 : 0.28;
+          const horizontalOffset = desktopLayout ? 2 * distance * halfViewAngle * camera.aspect * 0.08 : 0;
+          cameraFocusTarget.set(bamboo.position.x + cameraFocusX, bamboo.position.y,
+            bamboo.position.z + horizontalOffset);
+          cameraFocusPosition.copy(cameraFocusTarget).add(new THREE.Vector3(0, distance, 0));
+          camera.position.copy(cameraFocusPosition);
+          camera.up.set(-1, 0, 0);
+          camera.lookAt(cameraFocusTarget);
+          cameraFocusRotation.copy(camera.quaternion);
+          camera.up.set(0, 1, 0);
+          updateCamera();
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
+          if (phase === "playing" && !mukMoved) placeMukAtRest();
         }
 
         let paintCount = 0;
-        let phase = "playing";
-        let hoveredMarker = null;
-        let toastTimer = 0;
+        let currentSide = 1;
+        let phase = "intro";
+        const introStartedAt = performance.now();
+        let dragMode = null;
+        let dragPointerId = null;
+        let previousPointerX = 0;
+        let mukMoved = false;
+        let hasRotated = false;
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        const restPointer = new THREE.Vector2(0.28, -0.5);
+        const mukPlane = new THREE.Plane(
+          new THREE.Vector3(0, 1, 0),
+          -(bamboo.position.y + bambooAsset.radius + mukAsset.thickness * mukScale / 2)
+        );
+        const pointerWorld = new THREE.Vector3();
+        const dragOffset = new THREE.Vector3();
+        const previousMukPosition = new THREE.Vector3();
+        const targetMukPosition = new THREE.Vector3();
+        const mukTip = new THREE.Vector3();
+        const contact = new THREE.Vector3();
+        const hintPosition = new THREE.Vector3();
 
         function updateProgress() {
-          const percent = paintCount / paintMarkers.length * 100;
-          paintCountLabel.innerHTML = `${paintCount}<small> / ${paintMarkers.length}</small>`;
-          progressFill.style.width = `${percent}%`;
-          progressTrack.setAttribute("aria-valuenow", String(paintCount));
-          if (paintCount === 0) {
-            progressHint.textContent = "대나무 좌우를 클릭해 먹금을 칠해주세요";
-            progressState.textContent = "먹금칠 준비";
-          } else if (paintCount < paintMarkers.length) {
-            progressHint.textContent = "한쪽 먹금칠을 마쳤어요. 반대쪽도 클릭하세요";
-            progressState.textContent = "먹금칠 중";
-          } else {
+          const paintedSegments = paintAreas.reduce((sum, area) => sum + area.painted, 0);
+          const progress = paintedSegments / paintSegmentCount;
+          paintCountLabel.innerHTML = `${paintCount}<small> / ${paintAreas.length}</small>`;
+          progressFill.style.width = `${progress / paintAreas.length * 100}%`;
+          progressTrack.setAttribute("aria-valuenow", String(Math.round(progress * 100) / 100));
+          if (paintCount === paintAreas.length) {
             progressHint.textContent = "좌우 먹금칠을 모두 마쳤습니다";
             progressState.textContent = "완료";
+          } else {
+            progressHint.textContent = "먹 도구를 대고 대나무를 돌려 둘레를 채워주세요";
+            progressState.textContent = `${Math.round(paintAreas[currentSide].painted / paintSegmentCount * 100)}%`;
           }
         }
 
@@ -724,100 +848,165 @@
           raycaster.setFromCamera(pointer, camera);
         }
 
-        function findMarkerAtPointer() {
-          if (phase !== "playing") return null;
-          const available = paintMarkers.filter((marker) => marker.visible && !marker.userData.painted);
-          if (available.length === 0) return null;
-          const intersections = raycaster.intersectObjects(available, true);
-          if (intersections.length === 0) return null;
-          const markerIndex = intersections[0].object.userData.markerIndex;
-          return Number.isInteger(markerIndex) ? paintMarkers[markerIndex] : null;
+        function placeMukAtRest() {
+          camera.updateMatrixWorld(true);
+          raycaster.setFromCamera(restPointer, camera);
+          if (!raycaster.ray.intersectPlane(mukPlane, pointerWorld)) return;
+          muk.position.copy(pointerWorld);
+          muk.visible = true;
+          mukMoved = false;
         }
 
-        function updateHover(marker) {
-          if (hoveredMarker === marker) return;
-          hoveredMarker = marker;
-          for (const currentMarker of paintMarkers) {
-            const active = currentMarker === hoveredMarker && !currentMarker.userData.painted;
-            for (const material of currentMarker.userData.materials) {
-              material.emissive.setHex(active ? 0xb36a24 : 0x6a3b12);
-              material.emissiveIntensity = active ? 0.8 : 0.4;
-            }
-            for (const dot of currentMarker.children) {
-              if (dot.isMesh && dot.geometry.type === "SphereGeometry") {
-                dot.scale.setScalar(active ? 1.4 : 1);
-              }
-            }
+        function updateRotationHint() {
+          rotationHint.hidden = phase !== "playing" || hasRotated;
+          if (rotationHint.hidden) return;
+          camera.updateMatrixWorld(true);
+          hintPosition.set(bamboo.position.x + paintCenters[currentSide] - 0.1,
+            bamboo.position.y + bambooAsset.radius, bamboo.position.z - bambooAsset.radius).project(camera);
+          const x = (hintPosition.x + 1) * host.clientWidth / 2 + 10;
+          const y = (1 - hintPosition.y) * host.clientHeight / 2 - 32;
+          rotationHint.style.left = `${THREE.MathUtils.clamp(x, 8, host.clientWidth - 138)}px`;
+          rotationHint.style.top = `${THREE.MathUtils.clamp(y, 8, host.clientHeight - 100)}px`;
+        }
+
+        function endDrag() {
+          const pointerId = dragPointerId;
+          dragMode = null;
+          dragPointerId = null;
+          if (pointerId !== null && renderer.domElement.hasPointerCapture(pointerId)) {
+            renderer.domElement.releasePointerCapture(pointerId);
           }
-          renderer.domElement.style.cursor = hoveredMarker ? "pointer" : "default";
+          renderer.domElement.style.cursor = "default";
         }
 
-        function showToast(message) {
-          toast.textContent = message;
-          toast.classList.add("is-visible");
-          window.clearTimeout(toastTimer);
-          toastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
-        }
-
-        function paintBamboo(marker) {
-          if (phase !== "playing" || !marker || marker.userData.painted) return;
-          const isLeft = marker.userData.side === "left";
-          marker.userData.painted = true;
-          marker.visible = false;
-          paintBands[marker.userData.markerIndex].visible = true;
+        function finishPaintArea() {
+          paintAreas[currentSide].guide.visible = false;
           paintCount += 1;
-          updateProgress();
-          updateHover(null);
-
-          if (paintCount === paintMarkers.length) {
+          endDrag();
+          muk.visible = false;
+          if (paintCount === paintAreas.length) {
             phase = "complete";
             instruction.textContent = "대나무 좌우에 먹금칠을 모두 마쳤습니다.";
-            document.getElementById("complete-screen").classList.add("is-visible");
+            completionScreen.classList.add("is-visible");
           } else {
-            const sideText = isLeft ? "왼쪽" : "오른쪽";
-            instruction.textContent = `${sideText} 먹금칠을 마쳤어요. 반대쪽도 클릭하세요.`;
+            phase = "transition";
+            transitionStartX = cameraFocusX;
+            currentSide = 0;
+            transitionEndX = paintCenters[currentSide];
+            transitionStartedAt = performance.now();
+            instruction.textContent = "반대쪽으로 이동하고 있어요.";
           }
+          updateProgress();
+        }
+
+        function paintAtMukTip() {
+          if (phase !== "playing" || !muk.visible) return;
+          muk.updateMatrixWorld(true);
+          mukTip.set(mukAsset.length / 2, 0, 0).applyMatrix4(muk.matrixWorld);
+          const deltaZ = mukTip.z - bamboo.position.z;
+          if (Math.abs(mukTip.x - (bamboo.position.x + paintCenters[currentSide])) > paintBandWidth / 2
+            || Math.abs(deltaZ) > bambooAsset.radius * 0.95) return;
+
+          contact.set(mukTip.x,
+            bamboo.position.y + Math.sqrt(bambooAsset.radius ** 2 - deltaZ ** 2),
+            mukTip.z);
+          bamboo.updateMatrixWorld(true);
+          bamboo.worldToLocal(contact);
+          const angle = (Math.atan2(-contact.y, contact.z) + Math.PI * 2) % (Math.PI * 2);
+          const center = Math.floor(angle / segmentAngle);
+          const area = paintAreas[currentSide];
+          for (let offset = -1; offset <= 1; offset += 1) {
+            const index = (center + offset + paintSegmentCount) % paintSegmentCount;
+            if (!area.segments[index].visible) {
+              area.segments[index].visible = true;
+              area.painted += 1;
+            }
+          }
+          if (area.painted === paintSegmentCount) finishPaintArea();
+          else updateProgress();
         }
 
         function resetStage() {
+          endDrag();
           phase = "playing";
           paintCount = 0;
-          hoveredMarker = null;
-          for (const marker of paintMarkers) {
-            marker.visible = true;
-            marker.userData.painted = false;
-            marker.userData.materials[0].emissive.setHex(0x6a3b12);
-            marker.userData.materials[0].emissiveIntensity = 0.4;
-            for (const dot of marker.children) {
-              if (dot.isMesh && dot.geometry.type === "SphereGeometry") {
-                dot.scale.setScalar(1);
-              }
-            }
+          currentSide = 1;
+          bamboo.rotation.x = 0;
+          hasRotated = false;
+          for (let index = 0; index < paintAreas.length; index += 1) {
+            const area = paintAreas[index];
+            area.guide.visible = index === currentSide;
+            area.painted = 0;
+            for (const segment of area.segments) segment.visible = false;
           }
-          for (const paintBand of paintBands) paintBand.visible = false;
-          document.getElementById("complete-screen").classList.remove("is-visible");
-          instruction.textContent = "대나무 좌우를 차례로 클릭해 먹금을 칠하세요.";
+          cameraFocusX = paintCenters[currentSide];
+          cameraFocusPosition.x = bamboo.position.x + cameraFocusX;
+          updateCamera();
+          placeMukAtRest();
+          completionScreen.classList.remove("is-visible");
+          instruction.textContent = "먹 도구로 밝게 표시된 부분을 칠하고, 대나무를 돌려 한 바퀴를 채워주세요.";
           updateProgress();
-          renderer.domElement.style.cursor = "default";
           toast.classList.remove("is-visible");
         }
 
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        const clock = new THREE.Clock();
+        renderer.domElement.addEventListener("pointerdown", (event) => {
+          if (phase !== "playing" || dragMode !== null) return;
+          updatePointer(event);
+          if (raycaster.intersectObject(muk, true).length > 0) {
+            if (!raycaster.ray.intersectPlane(mukPlane, pointerWorld)) return;
+            dragMode = "muk";
+            dragOffset.copy(muk.position).sub(pointerWorld);
+            mukMoved = true;
+          } else if (raycaster.intersectObject(bambooAsset.body).length > 0) {
+            dragMode = "rotate";
+            previousPointerX = event.clientX;
+          } else {
+            return;
+          }
+          dragPointerId = event.pointerId;
+          renderer.domElement.setPointerCapture(event.pointerId);
+          renderer.domElement.style.cursor = "grabbing";
+          event.preventDefault();
+        });
 
         renderer.domElement.addEventListener("pointermove", (event) => {
           updatePointer(event);
-          updateHover(findMarkerAtPointer());
+          if (event.pointerId === dragPointerId && dragMode === "muk") {
+            if (!raycaster.ray.intersectPlane(mukPlane, pointerWorld)) return;
+            previousMukPosition.copy(muk.position);
+            targetMukPosition.copy(pointerWorld).add(dragOffset);
+            const steps = Math.max(1, Math.ceil(previousMukPosition.distanceTo(targetMukPosition) / 0.008));
+            for (let step = 1; step <= steps && phase === "playing"; step += 1) {
+              muk.position.lerpVectors(previousMukPosition, targetMukPosition, step / steps);
+              paintAtMukTip();
+            }
+          } else if (event.pointerId === dragPointerId && dragMode === "rotate") {
+            const rotation = (event.clientX - previousPointerX) * 0.02;
+            previousPointerX = event.clientX;
+            if (rotation !== 0) hasRotated = true;
+            const steps = Math.max(1, Math.ceil(Math.abs(rotation) / (segmentAngle / 2)));
+            for (let step = 0; step < steps && phase === "playing"; step += 1) {
+              bamboo.rotation.x += rotation / steps;
+              paintAtMukTip();
+            }
+          } else if (phase === "playing" && dragMode === null) {
+            const overTool = raycaster.intersectObject(muk, true).length > 0;
+            const overBamboo = raycaster.intersectObject(bambooAsset.body).length > 0;
+            renderer.domElement.style.cursor = overTool || overBamboo ? "grab" : "default";
+          }
         });
 
-        renderer.domElement.addEventListener("pointerleave", () => updateHover(null));
-
-        renderer.domElement.addEventListener("pointerdown", (event) => {
-          if (phase !== "playing") return;
-          updatePointer(event);
-          paintBamboo(findMarkerAtPointer());
-          event.preventDefault();
+        renderer.domElement.addEventListener("pointerup", (event) => {
+          if (event.pointerId === dragPointerId) endDrag();
+        });
+        renderer.domElement.addEventListener("pointercancel", (event) => {
+          if (event.pointerId === dragPointerId) endDrag();
+        });
+        renderer.domElement.addEventListener("lostpointercapture", (event) => {
+          if (event.pointerId === dragPointerId) endDrag();
+        });
+        renderer.domElement.addEventListener("pointerleave", () => {
+          if (dragMode === null) renderer.domElement.style.cursor = "default";
         });
 
         document.getElementById("retry-button").addEventListener("click", resetStage);
@@ -828,7 +1017,34 @@
         window.addEventListener("resize", resize);
         resize();
         updateProgress();
-        renderer.setAnimationLoop(() => renderer.render(scene, camera));
+        renderer.setAnimationLoop((timestamp) => {
+          if (phase === "intro") {
+            const progress = THREE.MathUtils.clamp((timestamp - introStartedAt) / 1400, 0, 1);
+            cameraProgress = progress * progress * (3 - 2 * progress);
+            updateCamera();
+            if (progress === 1) {
+              phase = "playing";
+              placeMukAtRest();
+            }
+          } else if (phase === "transition") {
+            const progress = THREE.MathUtils.clamp((timestamp - transitionStartedAt) / 1400, 0, 1);
+            const eased = progress * progress * (3 - 2 * progress);
+            cameraFocusX = THREE.MathUtils.lerp(transitionStartX, transitionEndX, eased);
+            cameraFocusPosition.x = bamboo.position.x + cameraFocusX;
+            updateCamera();
+            if (progress === 1) {
+              phase = "playing";
+              paintAreas[currentSide].guide.visible = true;
+              placeMukAtRest();
+              instruction.textContent = "반대쪽 밝은 부분도 칠하고 대나무를 돌려 한 바퀴를 채워주세요.";
+            }
+          }
+          const pulse = reducedMotion.matches ? 0.5 : (1 - Math.cos(timestamp * Math.PI * 2 / 1650)) / 2;
+          guideBandMaterial.opacity = 0.12 + 0.16 * pulse;
+          guideMaterial.opacity = 0.58 + 0.42 * pulse;
+          updateRotationHint();
+          renderer.render(scene, camera);
+        });
       })();
     }).catch((error) => {
       console.error("Three.js failed to load; the ink-marking stage could not start.", error);
