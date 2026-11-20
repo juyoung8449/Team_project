@@ -676,21 +676,17 @@
         bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
         scene.add(bamboo);
 
-        const inkMaterial = new THREE.MeshStandardMaterial({
-          color: 0x12130f,
-          roughness: 0.88,
-          metalness: 0
-        });
+        const inkAsset = createBambooInk(THREE, bambooAsset);
         const up = new THREE.Vector3(0, 1, 0);
         const xAxis = new THREE.Vector3(1, 0, 0);
         const bambooStart = bambooAsset.start;
         const bambooEnd = bambooAsset.end;
         const cutAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
 
-        const paintBandWidth = 0.09;
-        const paintCenters = [bambooStart + 0.24, bambooEnd - 0.24];
-        const paintSegmentCount = 48;
-        const segmentAngle = Math.PI * 2 / paintSegmentCount;
+        const paintBandWidth = inkAsset.width;
+        const paintCenters = inkAsset.centers;
+        const paintSegmentCount = inkAsset.segmentCount;
+        const segmentAngle = inkAsset.segmentAngle;
         const guideMaterial = new THREE.LineBasicMaterial({
           color: 0xffffff,
           transparent: true,
@@ -723,21 +719,7 @@
           guide.add(band);
           guide.add(new THREE.LineSegments(guideGeometry, guideMaterial));
           bamboo.add(guide);
-          const segments = [];
-          for (let segment = 0; segment < paintSegmentCount; segment += 1) {
-            const mesh = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.045, 0.045, paintBandWidth, 1, 1, true,
-                segment * segmentAngle, segmentAngle),
-              inkMaterial
-            );
-            mesh.position.x = center;
-            mesh.quaternion.copy(cutAxis);
-            mesh.visible = false;
-            mesh.receiveShadow = true;
-            bamboo.add(mesh);
-            segments.push(mesh);
-          }
-          return { guide, segments, painted: 0 };
+          return { guide, segments: inkAsset.areas[index], painted: 0 };
         });
 
         const mukAsset = createMuk(THREE);

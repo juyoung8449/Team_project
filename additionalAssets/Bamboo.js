@@ -67,3 +67,49 @@ function createBamboo(THREE, { cut = false } = {}) {
 
   return { group, body, ends, length, radius, start, end };
 }
+
+function createBambooRoundedEnd(THREE, bamboo, x) {
+  const end = new THREE.Mesh(
+    new THREE.SphereGeometry(bamboo.radius, 18, 12),
+    bamboo.body.material
+  );
+  end.position.x = x;
+  end.castShadow = true;
+  end.receiveShadow = true;
+  bamboo.group.add(end);
+  return end;
+}
+
+function createBambooInk(THREE, bamboo, { painted = false } = {}) {
+  const width = 0.09;
+  const centers = [bamboo.start + 0.24, bamboo.end - 0.24];
+  const segmentCount = 48;
+  const segmentAngle = Math.PI * 2 / segmentCount;
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x12130f,
+    roughness: 0.88,
+    metalness: 0
+  });
+  const axis = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(1, 0, 0)
+  );
+  const areas = centers.map((center) => {
+    const segments = [];
+    for (let index = 0; index < segmentCount; index += 1) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.045, width, 1, 1, true,
+          index * segmentAngle, segmentAngle),
+        material
+      );
+      mesh.position.x = center;
+      mesh.quaternion.copy(axis);
+      mesh.visible = painted;
+      mesh.receiveShadow = true;
+      bamboo.group.add(mesh);
+      segments.push(mesh);
+    }
+    return segments;
+  });
+  return { width, centers, segmentCount, segmentAngle, areas };
+}

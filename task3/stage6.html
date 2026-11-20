@@ -204,6 +204,59 @@
 
     #drag-blob.is-visible { display: block; }
 
+    #glue-effects {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .glue-drop {
+      position: absolute;
+      border-radius: 50% 50% 50% 5%;
+      border: 1px solid rgba(255, 232, 199, .55);
+      background: radial-gradient(circle at 35% 35%, #fff1d2 0%, #dba76a 22%, #a96536 65%, #704021 100%);
+      box-shadow: 0 1px 5px rgba(80, 38, 13, .45);
+      pointer-events: none;
+    }
+
+    #glue-guide {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #glue-guide.is-hidden, .glue-guide-arrow.is-hidden { display: none; }
+
+    #glue-guide-ring, .glue-guide-arrow {
+      fill: none;
+      stroke: rgba(255, 255, 248, .92);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, .7));
+      animation: glue-guide-pulse 1.7s ease-in-out infinite;
+    }
+
+    .glue-guide-arrow {
+      stroke-dasharray: 6 8;
+      marker-end: url(#glue-guide-arrowhead);
+      animation: glue-guide-flow 1.3s linear infinite, glue-guide-pulse 1.7s ease-in-out infinite;
+    }
+
+    @keyframes glue-guide-flow { to { stroke-dashoffset: -28; } }
+    @keyframes glue-guide-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #glue-guide-ring, .glue-guide-arrow { animation: none; }
+    }
+
     .cut-icon {
       display: grid;
       width: 31px;
@@ -445,11 +498,39 @@
 
     #load-error.is-visible { display: grid; }
     #load-error p { max-width: 470px; line-height: 1.8; }
+
+    @media (max-width: 600px) {
+      .vignette {
+        background: linear-gradient(0deg, rgba(11, 17, 15, .78), transparent 34%, rgba(11, 17, 15, .4));
+      }
+
+      .intro {
+        top: 105px;
+        left: 24px;
+        width: calc(100% - 48px);
+      }
+
+      .eyebrow { margin-bottom: 12px; }
+      h1 { font-size: 28px; }
+      #instruction { margin-top: 12px; }
+      .gesture-note { margin-top: 12px; }
+    }
   </style>
 </head>
 <body>
   <div id="scene" aria-label="대나무에 민어부레풀을 바르는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div id="glue-effects" aria-hidden="true"></div>
+  <svg id="glue-guide" class="is-hidden" aria-hidden="true">
+    <defs>
+      <marker id="glue-guide-arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+        <path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path>
+      </marker>
+    </defs>
+    <circle id="glue-guide-ring"></circle>
+    <path class="glue-guide-arrow"></path>
+    <path class="glue-guide-arrow"></path>
+  </svg>
   <div id="drag-blob" aria-hidden="true"></div>
 
   <main id="interface">
@@ -510,6 +591,7 @@
     <p>3D 장면을 불러오지 못했습니다.<br>인터넷 연결을 확인한 뒤 페이지를 새로고침해주세요.</p>
   </div>
 
+  <script src="../additionalAssets/Bamboo.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -526,6 +608,10 @@
         const completionScreen = document.getElementById("complete-screen");
         const toast = document.getElementById("toast");
         const dragBlob = document.getElementById("drag-blob");
+        const glueEffects = document.getElementById("glue-effects");
+        const glueGuide = document.getElementById("glue-guide");
+        const glueGuideRing = document.getElementById("glue-guide-ring");
+        const glueGuideArrows = document.querySelectorAll(".glue-guide-arrow");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -623,58 +709,32 @@
         addBox(table, [0.19, 0.15, 4.15], braceMaterial, [3.98, -0.25, 0]);
 
         const TABLE_TOP = 0.56;
-        const bambooLength = 3.5;
-        const cutLength = bambooLength / 12;
-        const bambooStart = -bambooLength / 2 + cutLength;
-        const bambooEnd = bambooLength / 2 - cutLength;
-        const inkBandWidth = 0.045;
-        const paintCenters = [bambooStart + 0.24, bambooEnd - 0.24];
+        const bambooAsset = createBamboo(THREE, { cut: true });
+        const bamboo = bambooAsset.group;
+        bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
+        scene.add(bamboo);
+        const inkAsset = createBambooInk(THREE, bambooAsset, { painted: true });
+        const bambooStart = bambooAsset.start;
+        const bambooEnd = bambooAsset.end;
+        const inkBandWidth = inkAsset.width;
+        const paintCenters = inkAsset.centers;
         const up = new THREE.Vector3(0, 1, 0);
         const xAxis = new THREE.Vector3(1, 0, 0);
         const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
-        const bamboo = new THREE.Group();
-        bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
-        scene.add(bamboo);
 
-        const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
-          metalness: 0.02
-        });
-        const inkMaterial = new THREE.MeshStandardMaterial({
-          color: 0x12130f,
-          roughness: 0.88,
-          metalness: 0
-        });
         const glueMaterial = new THREE.MeshStandardMaterial({
           color: 0x89502d,
           roughness: 0.72,
           metalness: 0
         });
-        const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooEnd - bambooStart, 32, 1),
-          bambooMaterial
-        );
-        body.position.x = (bambooStart + bambooEnd) / 2;
-        body.quaternion.copy(bodyAxis);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        bamboo.add(body);
-
         const coatedEnds = [];
         for (let index = 0; index < 2; index += 1) {
           const x = index === 0 ? bambooStart : bambooEnd;
-          const roundedEnd = new THREE.Mesh(
-            new THREE.SphereGeometry(0.044, 18, 12),
-            bambooMaterial
-          );
-          roundedEnd.position.x = x;
-          roundedEnd.castShadow = true;
-          roundedEnd.receiveShadow = true;
-          bamboo.add(roundedEnd);
+          bambooAsset.ends[index].visible = false;
+          createBambooRoundedEnd(THREE, bambooAsset, x);
 
           const coatedEnd = new THREE.Mesh(
-            new THREE.SphereGeometry(0.044, 18, 12),
+            new THREE.SphereGeometry(bambooAsset.radius, 18, 12),
             glueMaterial
           );
           coatedEnd.position.x = x;
@@ -723,18 +783,6 @@
           paintTargets.push(hitTarget);
         }
 
-        for (const x of paintCenters) {
-          const paintBand = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, inkBandWidth, 24, 1),
-            inkMaterial
-          );
-          paintBand.position.x = x;
-          paintBand.quaternion.copy(bodyAxis);
-          paintBand.castShadow = true;
-          paintBand.receiveShadow = true;
-          bamboo.add(paintBand);
-        }
-
         const bowl = new THREE.Group();
         bowl.position.set(2.42, TABLE_TOP, 1.28);
         scene.add(bowl);
@@ -770,12 +818,38 @@
         bowlRim.castShadow = true;
         bowl.add(bowlRim);
 
+        const cameraStartTarget = new THREE.Vector3(0, 1.05, 0);
+        const cameraStartDirection = new THREE.Vector3(0, 5.7, 10.8).normalize();
+        const cameraUp = new THREE.Vector3(0, cameraStartDirection.z, -cameraStartDirection.y);
+        const cameraStartPosition = new THREE.Vector3();
+        const cameraFocusPosition = new THREE.Vector3();
+        const cameraFocusTarget = new THREE.Vector3();
+        const cameraTarget = new THREE.Vector3();
+        const cameraIntroDuration = 1400;
+        const cameraIntroStart = performance.now();
+        let cameraProgress = 0;
+        let phase = "intro";
+
+        function updateCamera() {
+          camera.position.lerpVectors(cameraStartPosition, cameraFocusPosition, cameraProgress);
+          cameraTarget.lerpVectors(cameraStartTarget, cameraFocusTarget, cameraProgress);
+          camera.lookAt(cameraTarget);
+        }
+
         function resize() {
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
-          camera.position.set(0, 6.75, 10.8);
-          camera.lookAt(0, 1.05, 0);
+          const halfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const focusDistance = Math.max(7.5, 2.4 / (halfFov * camera.aspect * 0.9));
+          const halfWidth = focusDistance * halfFov * camera.aspect;
+          const focusX = Math.min(0.65, 2.75 - halfWidth * 0.92);
+          cameraFocusTarget.set(focusX, TABLE_TOP + 0.056, 1.28);
+          cameraFocusTarget.addScaledVector(cameraUp, focusDistance * halfFov * 0.28);
+          cameraFocusPosition.copy(cameraFocusTarget).addScaledVector(cameraStartDirection, focusDistance);
+          const startDistance = Math.max(Math.hypot(5.7, 10.8), focusDistance * 1.18);
+          cameraStartPosition.copy(cameraStartTarget).addScaledVector(cameraStartDirection, startDistance);
+          updateCamera();
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
         }
@@ -783,9 +857,87 @@
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         let paintCount = 0;
-        let phase = "playing";
         let isDragging = false;
+        let dragX = 0;
+        let dragY = 0;
+        let nextDripTime = 0;
         let toastTimer = 0;
+        let completionTimer = 0;
+
+        function projectScreenPosition(object, x, y, z) {
+          const point = object.localToWorld(new THREE.Vector3(x, y, z)).project(camera);
+          const rect = renderer.domElement.getBoundingClientRect();
+          return new THREE.Vector2(
+            rect.left + (point.x + 1) * rect.width / 2,
+            rect.top + (1 - point.y) * rect.height / 2
+          );
+        }
+
+        function updateGlueGuide() {
+          glueGuide.classList.toggle("is-hidden", phase !== "playing");
+          if (phase !== "playing") return;
+
+          camera.updateMatrixWorld(true);
+          bowl.updateWorldMatrix(true, false);
+          bamboo.updateWorldMatrix(true, false);
+          const source = projectScreenPosition(bowl, 0, 0.17, 0);
+          const edge = projectScreenPosition(bowl, 0.265, 0.17, 0);
+          const radius = Math.max(15, edge.x - source.x + 4);
+          glueGuideRing.setAttribute("cx", source.x);
+          glueGuideRing.setAttribute("cy", source.y);
+          glueGuideRing.setAttribute("r", radius);
+
+          glueGuideArrows.forEach((arrow, index) => {
+            arrow.classList.toggle("is-hidden", coatingBands[index].visible);
+            if (coatingBands[index].visible) return;
+            const target = projectScreenPosition(bamboo, paintCenters[index], bambooAsset.radius, 0);
+            const startX = source.x - radius * 0.8;
+            const startY = source.y - radius * 0.6;
+            const endY = target.y - 9;
+            const distance = Math.abs(startX - target.x);
+            const controlY = Math.min(startY, endY) - Math.min(70, 18 + distance * 0.09);
+            arrow.setAttribute("d", `M ${startX} ${startY} Q ${(startX + target.x) / 2} ${controlY} ${target.x} ${endY}`);
+          });
+        }
+
+        function createGlueDrop(x, y, size, keyframes, duration, easing = "ease-out") {
+          const drop = document.createElement("span");
+          drop.className = "glue-drop";
+          drop.style.left = `${x}px`;
+          drop.style.top = `${y}px`;
+          drop.style.width = `${size}px`;
+          drop.style.height = `${size}px`;
+          glueEffects.appendChild(drop);
+          const animation = drop.animate(keyframes, { duration, easing });
+          animation.onfinish = () => drop.remove();
+          animation.oncancel = () => drop.remove();
+        }
+
+        function dripGlue() {
+          const drift = (Math.random() - 0.5) * 8;
+          const fall = 32 + Math.random() * 28;
+          createGlueDrop(dragX + (Math.random() - 0.5) * 5, dragY + 9, 9 + Math.random() * 4, [
+            { transform: "translate(-50%, -50%) rotate(135deg) scale(.8)", opacity: 1 },
+            { transform: `translate(-50%, -50%) translate(${drift}px, ${fall}px) rotate(135deg) scale(.75)`, opacity: 0 }
+          ], 650 + Math.random() * 250, "ease-in");
+        }
+
+        function splashGlue(index) {
+          camera.updateMatrixWorld(true);
+          bamboo.updateWorldMatrix(true, false);
+          const [start, end] = coatingBounds[index];
+          for (let particleIndex = 0; particleIndex < 16; particleIndex += 1) {
+            const point = projectScreenPosition(bamboo, start + Math.random() * (end - start), bambooAsset.radius, 0);
+            const spread = (Math.random() - 0.5) * 70;
+            const rise = 18 + Math.random() * 32;
+            const fall = 5 + Math.random() * 16;
+            createGlueDrop(point.x, point.y, 8 + Math.random() * 5, [
+              { transform: "translate(-50%, -50%) rotate(135deg) scale(.5)", opacity: 1 },
+              { transform: `translate(-50%, -50%) translate(${spread * 0.55}px, ${-rise}px) rotate(135deg) scale(1)`, opacity: 1, offset: 0.45 },
+              { transform: `translate(-50%, -50%) translate(${spread}px, ${fall}px) rotate(135deg) scale(.5)`, opacity: 0 }
+            ], 650 + Math.random() * 220);
+          }
+        }
 
         function updateProgress() {
           const percent = paintCount / paintTargets.length * 100;
@@ -831,13 +983,14 @@
           if (phase !== "playing" || index === null || coatingBands[index].visible) return;
           coatingBands[index].visible = true;
           coatedEnds[index].visible = true;
+          splashGlue(index);
           paintCount += 1;
           updateProgress();
 
           if (paintCount === paintTargets.length) {
             phase = "complete";
             instruction.textContent = "대나무 양쪽에 민어부레풀을 발랐습니다.";
-            completionScreen.classList.add("is-visible");
+            completionTimer = window.setTimeout(() => completionScreen.classList.add("is-visible"), 850);
           } else {
             const sideText = index === 0 ? "왼쪽" : "오른쪽";
             instruction.textContent = `${sideText} 먹금까지 풀을 발랐어요. 반대쪽에도 발라주세요.`;
@@ -848,6 +1001,8 @@
           phase = "playing";
           paintCount = 0;
           isDragging = false;
+          window.clearTimeout(completionTimer);
+          glueEffects.replaceChildren();
           dragBlob.classList.remove("is-visible");
           for (const coating of coatingBands) coating.visible = false;
           for (const end of coatedEnds) end.visible = false;
@@ -861,6 +1016,8 @@
         renderer.domElement.addEventListener("pointermove", (event) => {
           updatePointer(event);
           if (isDragging) {
+            dragX = event.clientX;
+            dragY = event.clientY;
             dragBlob.style.left = `${event.clientX}px`;
             dragBlob.style.top = `${event.clientY}px`;
             return;
@@ -874,6 +1031,9 @@
           updatePointer(event);
           if (raycaster.intersectObjects([bowl], true).length === 0) return;
           isDragging = true;
+          dragX = event.clientX;
+          dragY = event.clientY;
+          nextDripTime = 0;
           dragBlob.classList.add("is-visible");
           dragBlob.style.left = `${event.clientX}px`;
           dragBlob.style.top = `${event.clientY}px`;
@@ -912,7 +1072,21 @@
         window.addEventListener("resize", resize);
         resize();
         updateProgress();
-        renderer.setAnimationLoop(() => renderer.render(scene, camera));
+        renderer.setAnimationLoop(() => {
+          const now = performance.now();
+          if (phase === "intro") {
+            const progress = Math.min((now - cameraIntroStart) / cameraIntroDuration, 1);
+            cameraProgress = THREE.MathUtils.smoothstep(progress, 0, 1);
+            updateCamera();
+            if (progress === 1) phase = "playing";
+          }
+          if (isDragging && now >= nextDripTime) {
+            dripGlue();
+            nextDripTime = now + 180;
+          }
+          updateGlueGuide();
+          renderer.render(scene, camera);
+        });
       })();
     }).catch((error) => {
       console.error("Three.js failed to load; the glue stage could not start.", error);
