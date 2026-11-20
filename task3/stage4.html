@@ -493,6 +493,7 @@
     <p>3D 장면을 불러오지 못했습니다.<br>인터넷 연결을 확인한 뒤 페이지를 새로고침해주세요.</p>
   </div>
 
+  <script src="../additionalAssets/Bamboo.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -605,21 +606,11 @@
         addBox(table, [0.19, 0.15, 4.15], braceMaterial, [3.98, -0.25, 0]);
 
         const TABLE_TOP = 0.56;
-        const bambooLength = 3.5;
-        const bamboo = new THREE.Group();
+        const bambooAsset = createBamboo(THREE, { cut: true });
+        const bamboo = bambooAsset.group;
         bamboo.position.set(0, TABLE_TOP + 0.056, 1.28);
         scene.add(bamboo);
 
-        const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
-          metalness: 0.02
-        });
-        const cutFaceMaterial = new THREE.MeshStandardMaterial({
-          color: 0xc5ad78,
-          roughness: 0.78,
-          metalness: 0
-        });
         const inkMaterial = new THREE.MeshStandardMaterial({
           color: 0x12130f,
           roughness: 0.88,
@@ -627,29 +618,9 @@
         });
         const up = new THREE.Vector3(0, 1, 0);
         const xAxis = new THREE.Vector3(1, 0, 0);
-        const cutLength = bambooLength / 12;
-        const bambooStart = -bambooLength / 2 + cutLength;
-        const bambooEnd = bambooLength / 2 - cutLength;
+        const bambooStart = bambooAsset.start;
+        const bambooEnd = bambooAsset.end;
         const cutAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
-        const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooEnd - bambooStart, 32, 1),
-          bambooMaterial
-        );
-        body.position.x = (bambooStart + bambooEnd) / 2;
-        body.quaternion.copy(cutAxis);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        bamboo.add(body);
-
-        for (let index = 0; index < 2; index += 1) {
-          const cap = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.044, 0.044, 0.018, 24),
-            cutFaceMaterial
-          );
-          cap.position.x = index === 0 ? bambooStart : bambooEnd;
-          cap.quaternion.copy(cutAxis);
-          bamboo.add(cap);
-        }
 
         const paintBandWidth = 0.045;
         const paintCenters = [bambooStart + 0.24, bambooEnd - 0.24];

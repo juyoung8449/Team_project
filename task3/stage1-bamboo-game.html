@@ -762,6 +762,7 @@
     <p>3D 장면을 불러오지 못했습니다.<br>인터넷 연결을 확인한 뒤 페이지를 새로고침해주세요.</p>
   </div>
 
+  <script src="../additionalAssets/bambooSpots.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -1231,15 +1232,8 @@
       const bambooNodeMaterial = new THREE.MeshStandardMaterial({
         color: 0x4c633b,
         roughness: 0.6,
-        metalness: 0.02
-      });
-      const bambooSpotMaterial = new THREE.MeshStandardMaterial({
-        color: 0x75472f,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-        roughness: 0.88,
-        metalness: 0
+        metalness: 0.02,
+        transparent: true
       });
       const unheatedBambooColor = bambooMaterial.color.clone();
       const cookedBambooColor = new THREE.Color(0xc69b69);
@@ -1248,7 +1242,9 @@
       function updateBambooColor(progress) {
         bambooMaterial.color.copy(unheatedBambooColor).lerp(cookedBambooColor, progress);
         bambooNodeMaterial.color.copy(unheatedNodeColor).lerp(cookedNodeColor, progress);
-        bambooSpotMaterial.opacity = progress * 0.86;
+        bambooMaterial.roughness = THREE.MathUtils.lerp(0.48, 0.52, progress);
+        bambooNodeMaterial.roughness = THREE.MathUtils.lerp(0.6, 0.62, progress);
+        for (const spot of bambooSpots) spot.mesh.material.opacity = progress * 0.86;
       }
 
       const bambooHitMaterial = new THREE.MeshBasicMaterial({
@@ -1281,6 +1277,7 @@
       for (let index = 0; index < 2; index += 1) {
         const end = new THREE.Mesh(new THREE.SphereGeometry(bambooRadius, 16, 12), bambooMaterial);
         end.userData.bambooHitTarget = true;
+        end.castShadow = true;
         bamboo.add(end);
         bambooEnds.push(end);
       }
@@ -1316,29 +1313,8 @@
       bambooBody.receiveShadow = true;
       bamboo.add(bambooBody);
 
-      const bambooSpotGeometry = new THREE.SphereGeometry(1, 10, 8);
-      const bambooSpots = [];
-      let bambooSpotSeed = 57391;
-      const bambooSpotRandom = () => {
-        bambooSpotSeed = (bambooSpotSeed * 16807) % 2147483647;
-        return (bambooSpotSeed - 1) / 2147483646;
-      };
-      for (let index = 0; index < 24; index += 1) {
-        const mesh = new THREE.Mesh(bambooSpotGeometry, bambooSpotMaterial);
-        const depth = 0.003 + bambooSpotRandom() * 0.0015;
-        mesh.scale.set(
-          0.03 + bambooSpotRandom() * 0.015,
-          0.014 + bambooSpotRandom() * 0.007,
-          depth
-        );
-        bamboo.add(mesh);
-        bambooSpots.push({
-          mesh,
-          t: (index + 0.15 + bambooSpotRandom() * 0.7) / 24,
-          angle: bambooSpotRandom() * Math.PI * 2,
-          depth
-        });
-      }
+      const bambooSpots = createBambooSpots(THREE, initialCurve, bambooRadius, 0);
+      for (const spot of bambooSpots) bamboo.add(spot.mesh);
 
       const bambooHitBody = new THREE.Mesh(
         new THREE.TubeGeometry(initialCurve, curveSegments, 0.19, 10, false),
@@ -1352,6 +1328,7 @@
         const tangent = initialCurve.getTangentAt(t).normalize();
         node.position.copy(initialCurve.getPointAt(t));
         node.quaternion.setFromUnitVectors(ringNormal, tangent);
+        node.castShadow = true;
         bamboo.add(node);
         bambooNodes.push({ mesh: node, t: t });
       }
@@ -1365,18 +1342,7 @@
         bambooHitBody.geometry = new THREE.TubeGeometry(curve, curveSegments, 0.19, 10, false);
 
         for (const spot of bambooSpots) {
-          const point = curve.getPointAt(spot.t);
-          const tangent = curve.getTangentAt(spot.t).normalize();
-          const radialA = new THREE.Vector3(0, 0, 1).cross(tangent).normalize();
-          const radialB = tangent.clone().cross(radialA).normalize();
-          const radial = radialA.multiplyScalar(Math.cos(spot.angle))
-            .addScaledVector(radialB, Math.sin(spot.angle))
-            .normalize();
-          const around = radial.clone().cross(tangent).normalize();
-          const orientation = new THREE.Matrix4().makeBasis(tangent, around, radial);
-          spot.mesh.position.copy(point)
-            .addScaledVector(radial, bambooRadius - spot.depth * 0.25);
-          spot.mesh.quaternion.setFromRotationMatrix(orientation);
+          updateBambooSpot(THREE, spot, curve, bambooRadius);
         }
 
         for (const node of bambooNodes) {

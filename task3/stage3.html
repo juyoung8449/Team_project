@@ -311,11 +311,12 @@
 
     #timing-game {
       position: absolute;
-      width: 120px;
-      height: 120px;
+      width: 150px;
+      height: 150px;
       transform: translate(-50%, -100%);
     }
 
+    #timing-game.is-mobile { transform: translate(-50%, -50%); }
     #timing-game[hidden], #cut-help[hidden] { display: none; }
 
     #timing-button {
@@ -361,6 +362,8 @@
       pointer-events: auto;
     }
 
+    #timing-game.is-mobile #cut-help { bottom: calc(100% + 4px); min-height: 28px; }
+
     #load-error {
       position: fixed;
       inset: 0;
@@ -386,6 +389,10 @@
       h1 { font-size: clamp(25px, 7vw, 32px); }
       #instruction { min-height: 0; margin-top: 8px; font-size: 11px; }
       .gesture-note { margin-top: 8px; font-size: 10px; }
+    }
+
+    @media (max-width: 620px) and (orientation: portrait) {
+      #cut-help { bottom: calc(100% + 4px); min-height: 28px; }
     }
   </style>
 </head>
@@ -420,8 +427,8 @@
       <button id="timing-button" type="button" aria-label="타이밍에 맞춰 오른쪽 대나무 재단">
         <svg viewBox="0 0 120 120" aria-hidden="true">
           <g id="timing-target" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="1" stroke-dasharray="3 3">
-            <circle cx="60" cy="60" r="27"></circle>
-            <circle cx="60" cy="60" r="33"></circle>
+            <circle cx="60" cy="60" r="25.5"></circle>
+            <circle cx="60" cy="60" r="34.5"></circle>
           </g>
           <circle id="timing-ring" cx="60" cy="60" r="11" fill="none" stroke="#fff" stroke-width="2"></circle>
         </svg>
@@ -468,6 +475,9 @@
         const timingButton = document.getElementById("timing-button");
         const timingRing = document.getElementById("timing-ring");
         const timingTarget = document.getElementById("timing-target");
+        const [innerTarget, outerTarget] = timingTarget.querySelectorAll("circle");
+        const innerRadius = Number(innerTarget.getAttribute("r"));
+        const outerRadius = Number(outerTarget.getAttribute("r"));
         const cutHelp = document.getElementById("cut-help");
 
         const scene = new THREE.Scene();
@@ -711,14 +721,8 @@
         bamboo.position.set(workOffset.x, bambooRestY, 1.28 + workOffset.z);
         scene.add(bamboo);
 
-        const cutFaceMaterial = new THREE.MeshStandardMaterial({
-          color: 0xc5ad78,
-          roughness: 0.78,
-          metalness: 0
-        });
+        const cutFaceMaterial = createBambooCutFaceMaterial(THREE);
         const up = new THREE.Vector3(0, 1, 0);
-        const xAxis = new THREE.Vector3(1, 0, 0);
-        const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
         const initialStart = -bambooLength / 2;
         const initialEnd = bambooLength / 2;
         const bambooBody = bambooAsset.body;
@@ -895,7 +899,7 @@
           new THREE.Matrix4().makeBasis(knifeDirection, knifeFaceNormal, knifeSide)
         );
         const knifeContact = new THREE.Vector3(
-          bamboo.position.x + bambooLength / 2 - bambooLength / 12,
+          bamboo.position.x + getBambooCutPosition(bambooLength),
           bambooRestY + bambooRadius,
           bamboo.position.z
         );
@@ -921,8 +925,7 @@
           .setFromAxisAngle(up, Math.PI)
           .multiply(knifeRestRotation);
 
-        const cutLength = bambooLength / 12;
-        const cutPosition = bambooLength / 2 - cutLength;
+        const cutPosition = getBambooCutPosition(bambooLength);
         const cutMarker = new THREE.Group();
         cutMarker.position.x = cutPosition;
         const cutMarkerMaterial = new THREE.MeshStandardMaterial({
@@ -946,12 +949,7 @@
           { name: "오른쪽", position: cutPosition, endIndex: 1, end: initialEnd, direction: 1 },
           { name: "왼쪽", position: -cutPosition, endIndex: 0, end: initialStart, direction: -1 }
         ].map((side) => {
-          const cap = new THREE.Mesh(
-            new THREE.CylinderGeometry(bambooRadius, bambooRadius, 0.018, 24),
-            cutFaceMaterial
-          );
-          cap.quaternion.copy(bodyAxis);
-          cap.position.x = side.position;
+          const cap = createBambooCutFace(THREE, bambooRadius, cutFaceMaterial, side.position);
           cap.visible = false;
           bamboo.add(cap);
 
@@ -980,16 +978,7 @@
 
         function setBambooRange(start, end) {
           bambooBody.geometry.dispose();
-          bambooBody.geometry = new THREE.TubeGeometry(
-            new THREE.LineCurve3(
-              new THREE.Vector3(start, 0, 0),
-              new THREE.Vector3(end, 0, 0)
-            ),
-            64,
-            bambooRadius,
-            16,
-            false
-          );
+          bambooBody.geometry = createBambooBodyGeometry(THREE, start, end, bambooRadius);
         }
 
         const cameraStartPosition = new THREE.Vector3(0, 6.75, 10.8);
@@ -1033,8 +1022,20 @@
         const timingPosition = new THREE.Vector3();
         const boardBounds = new THREE.Box3();
         const intro = document.querySelector(".intro");
+        const isMobile = navigator.userAgentData
+          ? navigator.userAgentData.mobile
+          : /Android.*Mobile|iPhone|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        timingGame.classList.toggle("is-mobile", isMobile);
 
         function positionTimingGame() {
+          if (isMobile) {
+            const size = Math.min(host.clientWidth * 0.35, host.clientHeight * 0.3);
+            timingGame.style.width = `${size}px`;
+            timingGame.style.height = `${size}px`;
+            timingGame.style.left = `${host.clientWidth * 0.24}px`;
+            timingGame.style.top = `${host.clientHeight * 0.43}px`;
+            return;
+          }
           camera.updateMatrixWorld();
           boardBounds.setFromObject(doma);
           let boardTop = host.clientHeight;
@@ -1046,19 +1047,48 @@
               }
             }
           }
-          const introClearance = host.clientWidth <= 620 && host.clientHeight > host.clientWidth
-            ? intro.getBoundingClientRect().bottom + 42
-            : 50;
-          const size = Math.min(120, Math.max(40, boardTop - 12 - introClearance), host.clientWidth - 16);
+          const isPortraitMobile = host.clientWidth <= 620 && host.clientHeight > host.clientWidth;
+          const introClearance = isPortraitMobile
+            ? intro.getBoundingClientRect().bottom + 32
+            : 42;
+          const size = Math.min(
+            150,
+            Math.max(isPortraitMobile ? 50 : 40, boardTop - 12 - introClearance),
+            (host.clientWidth - 16) / 1.5,
+            (host.clientHeight - introClearance) / 1.5
+          );
           timingGame.style.width = `${size}px`;
           timingGame.style.height = `${size}px`;
           timingGame.style.left = `${host.clientWidth / 2}px`;
           timingGame.style.top = `${Math.max(size + introClearance, boardTop - 12)}px`;
         }
 
+        // Allocate more of each half-cycle to angles near the target.
+        const timingSteps = 256;
+        const timingWeights = [0];
+        for (let step = 0; step < timingSteps; step += 1) {
+          const angle = Math.PI * (step + 0.5) / timingSteps;
+          const radius = 11 + 20 * (1 - Math.cos(angle));
+          const entering = THREE.MathUtils.smoothstep(radius, innerRadius - 6, innerRadius);
+          const leaving = 1 - THREE.MathUtils.smoothstep(radius, outerRadius, outerRadius + 6);
+          timingWeights.push(timingWeights[step] + 1 + 1.2 * entering * leaving);
+        }
+
         function timingRadius(timestamp) {
-          const cycle = (timestamp - timingStartedAt) * Math.PI * 2 / 2400;
-          return 11 + 40 * (1 - Math.cos(cycle)) / 2;
+          const cycle = ((timestamp - timingStartedAt) % 4500) / 2250;
+          const progress = cycle <= 1 ? cycle : 2 - cycle;
+          const targetWeight = progress * timingWeights[timingSteps];
+          let lower = 0;
+          let upper = timingSteps;
+          while (upper - lower > 1) {
+            const middle = Math.floor((lower + upper) / 2);
+            if (timingWeights[middle] < targetWeight) lower = middle;
+            else upper = middle;
+          }
+          const fraction = (targetWeight - timingWeights[lower])
+            / (timingWeights[upper] - timingWeights[lower]);
+          const angle = Math.PI * (lower + fraction) / timingSteps;
+          return 11 + 20 * (1 - Math.cos(angle));
         }
 
         function easeInOut(value) {
@@ -1200,7 +1230,7 @@
         timingButton.addEventListener("click", () => {
           if (phase !== "playing") return;
           const radius = Number(timingRing.getAttribute("r"));
-          if (radius >= 27 && radius <= 33) {
+          if (radius >= innerRadius && radius <= outerRadius) {
             startCut();
             return;
           }
