@@ -460,6 +460,48 @@
     <text x="80" y="135" text-anchor="middle" fill="white" font-size="12" opacity="0.7">←→ 흔들기</text>
   </svg>
 
+  <svg id="positioning-guide" viewBox="0 0 320 240" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .4s ease; z-index: 9; pointer-events: none;">
+    <defs>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <!-- Target highlight circle -->
+    <circle id="positioning-target" cx="160" cy="120" r="45" fill="none" stroke="white" stroke-width="2.5" stroke-dasharray="6 4" opacity="0.7" filter="url(#glow)" style="animation: guide-pulse 1.6s ease-in-out infinite;"/>
+    <!-- Arrow pointing to target -->
+    <path id="positioning-arrow" d="M 80 80 Q 110 100 145 115" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="8" opacity="0.8" filter="url(#glow)" style="animation: guide-pulse 1.6s ease-in-out infinite;"/>
+    <polygon id="positioning-arrowhead" points="150,120 142,115 148,108" fill="white" opacity="0.8" filter="url(#glow)"/>
+    <!-- Instruction text -->
+    <text x="80" y="40" font-size="14" fill="white" opacity="0.8" filter="url(#glow)" font-weight="500">화살대를 여기에 놓으세요</text>
+  </svg>
+
+  <svg id="drilling-guide" viewBox="0 0 320 240" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .4s ease; z-index: 9; pointer-events: none;">
+    <defs>
+      <filter id="drill-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <!-- Left-right shake arrows -->
+    <g>
+      <!-- Left arrow -->
+      <path d="M 60 120 L 100 120" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8" filter="url(#drill-glow)"/>
+      <polygon points="50,120 60,115 60,125" fill="white" opacity="0.8" filter="url(#drill-glow)"/>
+      <!-- Right arrow -->
+      <path d="M 260 120 L 220 120" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8" filter="url(#drill-glow)"/>
+      <polygon points="270,120 260,115 260,125" fill="white" opacity="0.8" filter="url(#drill-glow)"/>
+      <!-- Instruction text -->
+      <text x="160" y="50" font-size="16" fill="white" opacity="0.8" filter="url(#drill-glow)" font-weight="600" text-anchor="middle">좌우로 흔들어 송곳을 밀어넣으세요</text>
+    </g>
+  </svg>
+
   <main id="interface">
     <header class="topbar">
       <div class="brand">
@@ -519,6 +561,7 @@
   </div>
 
   <script src="../additionalAssets/Bamboo.js"></script>
+  <script src="stage7Bamboo.js"></script>
   <script>
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -535,6 +578,8 @@
         const completionScreen = document.getElementById("complete-screen");
         const toast = document.getElementById("toast");
         const actionGuide = document.getElementById("action-guide");
+        const positioningGuide = document.getElementById("positioning-guide");
+        const drillingGuide = document.getElementById("drilling-guide");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -638,20 +683,23 @@
         const xAxis = new THREE.Vector3(1, 0, 0);
         const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
 
-        // Create stage 7 final bamboo asset
-        const bambooAsset = createBamboo(THREE, { cut: true });
-        const bamboo = bambooAsset.group;
+        // Load stage 7 final bamboo asset from previous stage
+        let stage7BambooResult = null;
+        if (typeof window.stage7BambooResult !== 'undefined' && window.stage7BambooResult.group) {
+          // Use stored result from stage7
+          stage7BambooResult = window.stage7BambooResult;
+        } else {
+          // Create stage7 bamboo (wrapping complete state)
+          stage7BambooResult = createStage7Bamboo(THREE);
+        }
+        
+        const bamboo = stage7BambooResult.group;
+        const bambooAsset = stage7BambooResult.asset;
+        const inkAsset = stage7BambooResult.ink;
+        const glueAsset = stage7BambooResult.glue;
+
         bamboo.position.set(0, TABLE_TOP + 0.0575, 1.28);
         scene.add(bamboo);
-
-        const inkAsset = createBambooInk(THREE, bambooAsset, { painted: true });
-        const glueAsset = createBambooGlue(THREE, bambooAsset, inkAsset, { painted: true });
-
-        // Hide cut faces and add rounded ends
-        for (let index = 0; index < 2; index += 1) {
-          bambooAsset.ends[index].visible = false;
-          createBambooRoundedEnd(THREE, bambooAsset, index === 0 ? bambooAsset.start : bambooAsset.end);
-        }
 
         // Extract parameters from the asset for compatibility
         const bambooStart = bambooAsset.start;
@@ -826,6 +874,11 @@
           roughness: 0.76,
           metalness: 0
         });
+        const glueMaterial = new THREE.MeshStandardMaterial({
+          color: 0x89502d,
+          roughness: 0.72,
+          metalness: 0
+        });
         const nockGroup = new THREE.Group();
         const nockOrigin = new THREE.Vector3(2.15, TABLE_TOP + 0.0575, 1.28);
         nockGroup.position.copy(nockOrigin);
@@ -928,11 +981,19 @@
         let nockDipped = false;
         let toastTimer = 0;
 
-        function showGuidance(show) {
-          if (show) {
-            actionGuide.classList.add("is-visible");
-          } else {
-            actionGuide.classList.remove("is-visible");
+        function showGuidance(show, type = "positioning") {
+          if (type === "positioning") {
+            if (show) {
+              positioningGuide.style.opacity = "1";
+            } else {
+              positioningGuide.style.opacity = "0";
+            }
+          } else if (type === "drilling") {
+            if (show) {
+              drillingGuide.style.opacity = "1";
+            } else {
+              drillingGuide.style.opacity = "0";
+            }
           }
         }
 
@@ -944,27 +1005,32 @@
           if (phase === "positionShaft") {
             progressHint.textContent = "화살대를 송곳 위로 드래그해주세요";
             progressState.textContent = "정렬 준비";
-            showGuidance(false);
+            showGuidance(true, "positioning");
           } else if (phase === "drilling") {
             progressHint.textContent = "화살대를 잡고 좌우로 흔들어 구멍을 내세요";
             progressState.textContent = "구멍 내기 중";
-            showGuidance(true);
+            showGuidance(true, "drilling");
+            showGuidance(false, "positioning");
           } else if (phase === "aligning") {
             progressHint.textContent = "오늬 구멍이 완성됐어요. 화살대를 정렬합니다";
             progressState.textContent = "정렬 중";
-            showGuidance(false);
+            showGuidance(false, "positioning");
+            showGuidance(false, "drilling");
           } else if (phase === "dipNock") {
             progressHint.textContent = "밝은 오늬를 민어부레풀 그릇에 담갔다 꺼내세요";
             progressState.textContent = "오늬 풀칠";
-            showGuidance(false);
+            showGuidance(false, "positioning");
+            showGuidance(false, "drilling");
           } else if (phase === "attachNock") {
             progressHint.textContent = "갈색으로 풀칠된 오늬를 화살대 끝에 드래그하세요";
             progressState.textContent = "오늬 부착";
-            showGuidance(false);
+            showGuidance(false, "positioning");
+            showGuidance(false, "drilling");
           } else {
             progressHint.textContent = "오늬를 단단히 붙였습니다";
             progressState.textContent = "완료";
-            showGuidance(false);
+            showGuidance(false, "positioning");
+            showGuidance(false, "drilling");
           }
         }
 
@@ -983,6 +1049,14 @@
 
         function hitsNock() {
           return raycaster.intersectObjects([nockGroup], true).length > 0;
+        }
+
+        function isPositionedCorrectly() {
+          // 위치 판정을 대폭 완화: 송곳 주변 큰 범위에서 판정
+          const tolerance = 0.3; // 허용 범위를 넓힘
+          const distX = Math.abs(bamboo.position.x - shaftOrigin.x);
+          const distZ = Math.abs(bamboo.position.z - shaftOrigin.z);
+          return distX < tolerance && distZ < tolerance;
         }
 
         function showToast(message) {
@@ -1135,7 +1209,8 @@
           renderer.domElement.style.cursor = "default";
 
           if (kind === "shaftPosition") {
-            if (raycaster.intersectObject(jigTarget, false).length > 0) {
+            // 위치 판정을 완화: isPositionedCorrectly 함수 사용
+            if (isPositionedCorrectly()) {
               bamboo.position.set(0, drillStartY, jig.position.z);
               bamboo.quaternion.copy(verticalQuaternion);
               phase = "drilling";
@@ -1181,6 +1256,7 @@
         window.addEventListener("resize", resize);
         resize();
         updateProgress();
+        
         renderer.setAnimationLoop(() => {
           const delta = Math.min(clock.getDelta(), 0.05);
           if (phase === "aligning") {

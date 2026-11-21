@@ -501,6 +501,7 @@
 
   <script src="../additionalAssets/Bamboo.js"></script>
   <script src="stage7-trace.js"></script>
+  <script src="stage7Bamboo.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -772,6 +773,13 @@
             phase = "complete";
             instruction.textContent = "대나무 양쪽에 쇠심줄을 감았습니다.";
             completionScreen.classList.add("is-visible");
+            
+            // Store completed bamboo state for stage8
+            window.stage7BambooResult.group = bamboo;
+            window.stage7BambooResult.asset = bambooAsset;
+            window.stage7BambooResult.ink = inkAsset;
+            window.stage7BambooResult.glue = glueAsset;
+            window.stage7BambooResult.wrap = wrapGroups;
           } else {
             phase = "moving";
             cameraFromSide = index;
