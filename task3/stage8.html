@@ -188,6 +188,21 @@
       letter-spacing: .015em;
     }
 
+    #action-guide {
+      opacity: 0;
+      transition: opacity .3s ease;
+    }
+
+    #action-guide:is([style*="opacity: 1"]),
+    #action-guide.is-visible {
+      opacity: 1;
+    }
+
+    @keyframes guide-pulse {
+      0%, 100% { opacity: .4; }
+      50% { opacity: 1; }
+    }
+
     .cut-icon {
       display: grid;
       width: 31px;
@@ -435,6 +450,16 @@
   <div id="scene" aria-label="송곳으로 화살대에 구멍을 내고 오늬를 붙이는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
 
+  <svg id="action-guide" viewBox="0 0 160 160" aria-hidden="true" style="position: absolute; top: 50%; left: 50%; width: 160px; height: 160px; transform: translate(-50%, -50%); opacity: 0; transition: opacity .3s ease; z-index: 10; pointer-events: none;">
+    <defs>
+      <marker id="guide-arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 Z" fill="white" opacity="0.8"/>
+      </marker>
+    </defs>
+    <path id="action-guide-arrow" d="M 40 80 L 50 80 M 110 80 L 100 80 M 50 60 L 50 100 M 100 60 L 100 100" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-dasharray="8" filter="drop-shadow(0 0 6px rgba(255, 255, 255, .6))" style="animation: guide-pulse 1.6s ease-in-out infinite;"/>
+    <text x="80" y="135" text-anchor="middle" fill="white" font-size="12" opacity="0.7">←→ 흔들기</text>
+  </svg>
+
   <main id="interface">
     <header class="topbar">
       <div class="brand">
@@ -508,6 +533,7 @@
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
         const toast = document.getElementById("toast");
+        const actionGuide = document.getElementById("action-guide");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -948,6 +974,14 @@
         let nockDipped = false;
         let toastTimer = 0;
 
+        function showGuidance(show) {
+          if (show) {
+            actionGuide.classList.add("is-visible");
+          } else {
+            actionGuide.classList.remove("is-visible");
+          }
+        }
+
         function updateProgress() {
           const percent = Math.round(drillProgress * 100);
           progressValue.textContent = `${percent}%`;
@@ -956,21 +990,27 @@
           if (phase === "positionShaft") {
             progressHint.textContent = "화살대를 송곳 위로 드래그해주세요";
             progressState.textContent = "정렬 준비";
+            showGuidance(false);
           } else if (phase === "drilling") {
             progressHint.textContent = "화살대를 잡고 좌우로 흔들어 구멍을 내세요";
             progressState.textContent = "구멍 내기 중";
+            showGuidance(true);
           } else if (phase === "aligning") {
             progressHint.textContent = "오늬 구멍이 완성됐어요. 화살대를 정렬합니다";
             progressState.textContent = "정렬 중";
+            showGuidance(false);
           } else if (phase === "dipNock") {
             progressHint.textContent = "밝은 오늬를 민어부레풀 그릇에 담갔다 꺼내세요";
             progressState.textContent = "오늬 풀칠";
+            showGuidance(false);
           } else if (phase === "attachNock") {
             progressHint.textContent = "갈색으로 풀칠된 오늬를 화살대 끝에 드래그하세요";
             progressState.textContent = "오늬 부착";
+            showGuidance(false);
           } else {
             progressHint.textContent = "오늬를 단단히 붙였습니다";
             progressState.textContent = "완료";
+            showGuidance(false);
           }
         }
 
