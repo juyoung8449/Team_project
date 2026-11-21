@@ -518,6 +518,7 @@
     <p>3D 장면을 불러오지 못했습니다.<br>인터넷 연결을 확인한 뒤 페이지를 새로고침해주세요.</p>
   </div>
 
+  <script src="../additionalAssets/Bamboo.js"></script>
   <script type="module">
     const errorScreen = document.getElementById("load-error");
     import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js").then((THREE) => {
@@ -633,77 +634,36 @@
         const TABLE_TOP = 0.56;
         const bambooLength = 3.5;
         const cutLength = bambooLength / 12;
-        const bambooStart = -bambooLength / 2 + cutLength;
-        const bambooEnd = bambooLength / 2 - cutLength;
-        const inkBandWidth = 0.045;
-        const inkCenters = [bambooStart + 0.24, bambooEnd - 0.24];
         const up = new THREE.Vector3(0, 1, 0);
         const xAxis = new THREE.Vector3(1, 0, 0);
         const bodyAxis = new THREE.Quaternion().setFromUnitVectors(up, xAxis);
-        const bamboo = new THREE.Group();
+
+        // Create stage 7 final bamboo asset
+        const bambooAsset = createBamboo(THREE, { cut: true });
+        const bamboo = bambooAsset.group;
         bamboo.position.set(0, TABLE_TOP + 0.0575, 1.28);
         scene.add(bamboo);
 
-        const bambooMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8eaa67,
-          roughness: 0.48,
-          metalness: 0.02
-        });
-        const inkMaterial = new THREE.MeshStandardMaterial({
-          color: 0x12130f,
-          roughness: 0.88,
-          metalness: 0
-        });
-        const glueMaterial = new THREE.MeshStandardMaterial({
-          color: 0x89502d,
-          roughness: 0.72,
-          metalness: 0
-        });
+        const inkAsset = createBambooInk(THREE, bambooAsset, { painted: true });
+        const glueAsset = createBambooGlue(THREE, bambooAsset, inkAsset, { painted: true });
+
+        // Hide cut faces and add rounded ends
+        for (let index = 0; index < 2; index += 1) {
+          bambooAsset.ends[index].visible = false;
+          createBambooRoundedEnd(THREE, bambooAsset, index === 0 ? bambooAsset.start : bambooAsset.end);
+        }
+
+        // Extract parameters from the asset for compatibility
+        const bambooStart = bambooAsset.start;
+        const bambooEnd = bambooAsset.end;
+        const inkCenters = [bambooStart + 0.24, bambooEnd - 0.24];
+        const inkBandWidth = inkAsset.width;
+
         const threadMaterial = new THREE.MeshStandardMaterial({
           color: 0xf3efe4,
           roughness: 0.68,
           metalness: 0.02
         });
-        const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.044, 0.044, bambooEnd - bambooStart, 32, 1),
-          bambooMaterial
-        );
-        body.position.x = (bambooStart + bambooEnd) / 2;
-        body.quaternion.copy(bodyAxis);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        bamboo.add(body);
-
-        const roundedEnds = [];
-        for (let index = 0; index < 2; index += 1) {
-          const x = index === 0 ? bambooStart : bambooEnd;
-          const roundedEnd = new THREE.Mesh(
-            new THREE.SphereGeometry(0.044, 18, 12),
-            glueMaterial
-          );
-          roundedEnd.position.x = x;
-          roundedEnd.castShadow = true;
-          roundedEnd.receiveShadow = true;
-          bamboo.add(roundedEnd);
-          roundedEnds.push(roundedEnd);
-        }
-
-        const coatingBounds = [
-          [bambooStart, inkCenters[0] - inkBandWidth / 2],
-          [inkCenters[1] + inkBandWidth / 2, bambooEnd]
-        ];
-        for (const [start, end] of coatingBounds) {
-          const coating = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, end - start, 32, 1),
-            glueMaterial
-          );
-          coating.position.x = (start + end) / 2;
-          coating.quaternion.copy(bodyAxis);
-          coating.castShadow = true;
-          coating.receiveShadow = true;
-          bamboo.add(coating);
-        }
-
         const hitTargetMaterial = new THREE.MeshBasicMaterial({
           transparent: true,
           opacity: 0,
@@ -714,6 +674,12 @@
         const wrapGroups = [];
         const looseThreads = [];
         const threadOrigins = [];
+
+        const coatingBounds = [
+          [bambooStart, inkCenters[0] - inkBandWidth / 2],
+          [inkCenters[1] + inkBandWidth / 2, bambooEnd]
+        ];
+
         for (let index = 0; index < inkCenters.length; index += 1) {
           const hitTarget = new THREE.Mesh(
             new THREE.CylinderGeometry(0.22, 0.22, 0.36, 12),
@@ -781,18 +747,6 @@
           threadGroup.add(threadHitTarget);
           looseThreads.push(threadGroup);
           threadOrigins.push(threadGroup.position.clone());
-        }
-
-        for (const x of inkCenters) {
-          const paintBand = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.045, 0.045, inkBandWidth, 24, 1),
-            inkMaterial
-          );
-          paintBand.position.x = x;
-          paintBand.quaternion.copy(bodyAxis);
-          paintBand.castShadow = true;
-          paintBand.receiveShadow = true;
-          bamboo.add(paintBand);
         }
 
         const shaftLength = bambooEnd - bambooStart;
@@ -1044,7 +998,7 @@
           draggedKind = null;
           holeCover.visible = false;
           hole.visible = true;
-          roundedEnds[1].visible = false;
+          bambooAsset.ends[1].visible = false;
           alignmentStartPosition.copy(bamboo.position);
           alignmentStartQuaternion.copy(bamboo.quaternion);
           alignmentStartJigPosition.copy(jig.position);
@@ -1093,7 +1047,7 @@
           jigDisk.visible = true;
           holeCover.visible = true;
           hole.visible = false;
-          for (const roundedEnd of roundedEnds) roundedEnd.visible = true;
+          for (const roundedEnd of bambooAsset.ends) roundedEnd.visible = true;
           nockGroup.visible = false;
           nockGroup.position.copy(nockOrigin);
           nockGlue.visible = false;
