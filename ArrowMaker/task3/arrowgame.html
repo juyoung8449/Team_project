@@ -58,6 +58,19 @@
       let pendingFrame = null;
       let pendingStage = null;
 
+      //locaslStorage 새로고침 게임현황 추가
+      const saveStage = (stageFile) => 
+      {
+        localStorage.setItem("savedStageFile", stageFile);
+      };
+
+      const savedStage = localStorage.getItem("savedStageFile");
+      if (savedStage) 
+      {
+        activeFrame.src = savedStage;
+      }
+
+      
       window.addEventListener("message", (event) => {
         // 조기종료 방어용
         if (event.origin !== window.location.origin) return; 
@@ -71,6 +84,7 @@
           && !pendingFrame
         ) {
           pendingStage = message.stage;
+          saveStage(`${pendingStage}.html`); //현재 진행중인 스테이지(게임현황)를 저장
           pendingFrame = document.createElement("iframe");
           pendingFrame.className = "stage-frame";
           pendingFrame.title = `대나무 공방 ${pendingStage === "stage2" ? "2단계" : "3단계"}`;
@@ -103,8 +117,8 @@
       let pendingStage = null;
       let fallbackTimer = null;
 
-
       */
+      
 
     </script>
   </body>

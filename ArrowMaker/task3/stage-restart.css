@@ -1,0 +1,27 @@
+.stage-controls {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.stage-restart {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(21, 29, 26, .64);
+  color: #e8dfcc;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+
+.stage-restart:hover, .stage-restart:focus-visible {
+  border-color: rgba(215, 173, 108, .65);
+  background: rgba(35, 44, 37, .9);
+}
