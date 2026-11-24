@@ -37,6 +37,36 @@
         linear-gradient(90deg, rgba(13, 20, 18, .86), rgba(13, 20, 18, .38) 36%, transparent 68%),
         linear-gradient(0deg, rgba(11, 17, 15, .76), transparent 38%, rgba(11, 17, 15, .22));
     }
+    #drag-guides {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #drag-guides [hidden] { display: none; }
+    #drag-guides path {
+      fill: none;
+      stroke: rgba(255, 255, 248, .95);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, .7));
+      animation: guide-pulse 1.7s ease-in-out infinite;
+    }
+    #drag-guides .guide-line {
+      stroke-dasharray: 6 8;
+      animation: guide-flow 1.3s linear infinite, guide-pulse 1.7s ease-in-out infinite;
+    }
+    @keyframes guide-flow { to { stroke-dashoffset: -28; } }
+    @keyframes guide-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #drag-guides path { animation: none; }
+    }
     #interface { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
     .topbar {
       position: absolute;
@@ -226,6 +256,10 @@
 <body>
   <div id="scene" aria-label="깃털을 화살대에 붙이는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <svg id="drag-guides" aria-hidden="true">
+    <g hidden><path class="guide-line"></path><path class="guide-head"></path></g>
+    <g hidden><path class="guide-line"></path><path class="guide-head"></path></g>
+  </svg>
   <main id="interface">
     <header class="topbar">
       <div class="brand">
@@ -276,6 +310,7 @@
         const progressHint = document.getElementById("progress-hint");
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
+        const dragGuides = document.querySelectorAll("#drag-guides g");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -589,15 +624,30 @@
           return { group, side, startPosition: loosePositions[index].clone(), guide: guideBySide.get(side), attached: false };
         });
 
-        const cameraTarget = new THREE.Vector3(0, 0.92, 0.05);
-        camera.position.set(0, 4.8, 8.9);
+        arrow.updateMatrixWorld(true);
+        const cameraTarget = arrow.localToWorld(new THREE.Vector3(0, shaftLength / 2, 0));
+        const previousCameraTarget = new THREE.Vector3(0.25, tableTop + 0.4, 1.75 + 0.052 * (2 / 3 * 1.35));
+        const previousCameraPosition = previousCameraTarget.clone().add(
+          new THREE.Vector3(0, 4.8 - 0.88, 8.9 + 0.05).multiplyScalar(0.72 / 1.4)
+        );
+        camera.position.copy(previousCameraPosition);
+        camera.lookAt(previousCameraTarget);
+        const previousCameraRotation = camera.quaternion.clone();
+        const overheadCameraPosition = cameraTarget.clone().add(new THREE.Vector3(0, 10, 0));
+        camera.up.set(1, 0, 0);
+        camera.position.copy(overheadCameraPosition);
         camera.lookAt(cameraTarget);
+        const overheadCameraRotation = camera.quaternion.clone();
+        camera.position.copy(previousCameraPosition);
+        camera.quaternion.copy(previousCameraRotation);
         const pointer = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
         const pointerWorld = new THREE.Vector3();
         const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(tableTop + 0.13));
         const dragOffset = new THREE.Vector3();
-        let phase = "ready";
+        let phase = "transition";
+        let transitionStartedAt = 0;
+        let transitionTimeout = 0;
         let activeFeather = null;
         let attachedCount = 0;
 
@@ -605,6 +655,9 @@
           const width = Math.max(1, host.clientWidth);
           const height = Math.max(1, host.clientHeight);
           camera.aspect = width / height;
+          const heightForFeathers = 2.8 / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+          overheadCameraPosition.y = cameraTarget.y + Math.max(10, heightForFeathers);
+          if (phase !== "transition") camera.position.copy(overheadCameraPosition);
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
         }
@@ -614,7 +667,11 @@
           progressValue.textContent = `${percent}%`;
           progressFill.style.width = `${percent}%`;
           progressTrack.setAttribute("aria-valuenow", String(percent));
-          if (phase === "complete") {
+          if (phase === "transition") {
+            instruction.textContent = "화살과 깃털이 보이도록 작업대 위로 이동합니다.";
+            progressHint.textContent = "작업대 시점으로 이동 중";
+            progressState.textContent = "이동 중";
+          } else if (phase === "complete") {
             instruction.textContent = "두 깃털이 화살대에 붙어 화살이 완성되었습니다.";
             progressHint.textContent = "화살 완성";
             progressState.textContent = "완료";
@@ -633,6 +690,15 @@
           }
         }
 
+        function finishTransition() {
+          if (phase !== "transition") return;
+          window.clearTimeout(transitionTimeout);
+          camera.position.copy(overheadCameraPosition);
+          camera.quaternion.copy(overheadCameraRotation);
+          phase = "ready";
+          updateProgress();
+        }
+
         function updatePointer(event) {
           const rect = renderer.domElement.getBoundingClientRect();
           pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -649,6 +715,41 @@
 
         function getTargetLocalPosition(side) {
           return new THREE.Vector3(0, targetY, -side * shaftRadius);
+        }
+
+        function updateDragGuides() {
+          camera.updateMatrixWorld(true);
+          scene.updateMatrixWorld(true);
+          const rect = renderer.domElement.getBoundingClientRect();
+          function project(point) {
+            point.project(camera);
+            return new THREE.Vector2(
+              rect.left + (point.x + 1) * rect.width / 2,
+              rect.top + (1 - point.y) * rect.height / 2
+            );
+          }
+          feathers.forEach((feather, index) => {
+            const guide = dragGuides[index];
+            guide.toggleAttribute("hidden", phase === "transition" || feather.attached);
+            if (phase === "transition" || feather.attached) return;
+            const start = project(feather.group.localToWorld(
+              new THREE.Vector3(feather.side * featherHalfWidth * 0.45, 0, 0)
+            ));
+            const end = project(arrow.localToWorld(getTargetLocalPosition(feather.side)));
+            const direction = end.clone().sub(start);
+            const length = direction.length();
+            if (length < 8) {
+              guide.setAttribute("hidden", "");
+              return;
+            }
+            direction.divideScalar(length);
+            const wing = new THREE.Vector2(-direction.y, direction.x).multiplyScalar(5);
+            const base = end.clone().addScaledVector(direction, -9);
+            const left = base.clone().add(wing);
+            const right = base.clone().sub(wing);
+            guide.querySelector(".guide-line").setAttribute("d", `M ${start.x} ${start.y} L ${end.x} ${end.y}`);
+            guide.querySelector(".guide-head").setAttribute("d", `M ${left.x} ${left.y} L ${end.x} ${end.y} L ${right.x} ${right.y}`);
+          });
         }
 
         function isOverAttachmentTarget(feather) {
@@ -717,7 +818,7 @@
         }
 
         renderer.domElement.addEventListener("pointerdown", (event) => {
-          if (event.button !== 0 || phase === "complete") return;
+          if (event.button !== 0 || phase !== "ready") return;
           updatePointer(event);
           for (const feather of feathers) {
             if (feather.attached) continue;
@@ -736,6 +837,10 @@
         });
 
         renderer.domElement.addEventListener("pointermove", (event) => {
+          if (phase === "transition") {
+            renderer.domElement.style.cursor = "default";
+            return;
+          }
           updatePointer(event);
           if (activeFeather && phase === "dragging") {
             const point = getPlanePoint();
@@ -759,7 +864,23 @@
         window.addEventListener("resize", resize);
         resize();
         updateProgress();
-        renderer.setAnimationLoop(() => renderer.render(scene, camera));
+        transitionStartedAt = window.performance.now();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          finishTransition();
+        } else {
+          transitionTimeout = window.setTimeout(finishTransition, 1250);
+        }
+        renderer.setAnimationLoop(() => {
+          if (phase === "transition") {
+            const amount = Math.min((window.performance.now() - transitionStartedAt) / 1200, 1);
+            const eased = 1 - Math.pow(1 - amount, 3);
+            camera.position.lerpVectors(previousCameraPosition, overheadCameraPosition, eased);
+            camera.quaternion.slerpQuaternions(previousCameraRotation, overheadCameraRotation, eased);
+            if (amount >= 1) finishTransition();
+          }
+          updateDragGuides();
+          renderer.render(scene, camera);
+        });
       })();
     }).catch((error) => {
       console.error("Three.js failed to load; the feather-attachment stage could not start.", error);

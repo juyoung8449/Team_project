@@ -37,6 +37,41 @@
         linear-gradient(90deg, rgba(13, 20, 18, .83) 0%, rgba(13, 20, 18, .5) 31%, transparent 62%),
         linear-gradient(0deg, rgba(11, 17, 15, .76), transparent 36%, rgba(11, 17, 15, .26));
     }
+    #interaction-guide {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    #interaction-guide [hidden] { display: none; }
+    .guide-stroke {
+      fill: none;
+      stroke: rgba(255, 255, 248, .95);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, .7));
+      animation: guide-pulse 1.7s ease-in-out infinite;
+    }
+    .guide-dashes { stroke-dasharray: 6 8; }
+    .guide-text {
+      fill: #fff;
+      font: 12px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      paint-order: stroke;
+      stroke: rgba(13, 20, 18, .8);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+    @keyframes guide-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .guide-stroke { animation: none; }
+    }
     #interface { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
     .topbar {
       position: absolute;
@@ -236,6 +271,21 @@
 <body>
   <div id="scene" aria-label="오늬를 깎아 활시위가 걸릴 홈을 만드는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <svg id="interaction-guide" aria-hidden="true">
+    <g id="click-guide" hidden>
+      <circle class="guide-stroke" r="24"></circle>
+      <g transform="translate(15 14)" class="guide-stroke">
+        <path d="M 0 0 L 13 13 L 11 4 Q 10 1 12 0 Q 14 -1 16 2 L 23 14 L 25 12 Q 27 11 29 13 L 34 19 Q 37 23 34 27 L 29 32 Q 26 35 22 33 L 14 29 Q 11 27 10 24 L 7 18 Q 6 15 8 14 Q 10 13 12 15"></path>
+        <path d="M -5 -5 L -9 -9 M 1 -7 L 1 -12 M -7 1 L -12 1"></path>
+      </g>
+    </g>
+    <g id="carve-guide" hidden>
+      <path class="guide-stroke guide-dashes" d="M 130 0 L 12 0"></path>
+      <path class="guide-stroke" d="M 22 -6 L 12 0 L 22 6"></path>
+      <!-- 가이드 텍스트
+      <text class="guide-text" x="130" y="-13" text-anchor="end">가이드를 따라 홈을 파주세요</text>  -->
+    </g>
+  </svg>
   <main id="interface">
     <header class="topbar">
       <div class="brand">
@@ -289,6 +339,8 @@
         const progressHint = document.getElementById("progress-hint");
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
+        const clickGuide = document.getElementById("click-guide");
+        const carveGuide = document.getElementById("carve-guide");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -528,6 +580,24 @@
           renderer.setSize(width, height, false);
         }
 
+        function updateInteractionGuide() {
+          clickGuide.toggleAttribute("hidden", phase !== "laid");
+          carveGuide.toggleAttribute("hidden", phase !== "carving");
+          if (phase !== "laid" && phase !== "carving") return;
+
+          camera.updateMatrixWorld(true);
+          arrow.updateMatrixWorld(true);
+          const point = phase === "laid"
+            ? arrow.localToWorld(new THREE.Vector3(0, shaftLength * 0.6, 0))
+            : nockGroup.localToWorld(new THREE.Vector3(cutWidth / 2, nockTop - cutDepth / 2, shaftRadius));
+          point.project(camera);
+          const rect = renderer.domElement.getBoundingClientRect();
+          const x = rect.left + (point.x + 1) * rect.width / 2;
+          const y = rect.top + (1 - point.y) * rect.height / 2;
+          const guide = phase === "laid" ? clickGuide : carveGuide;
+          guide.setAttribute("transform", `translate(${x} ${y})`);
+        }
+
         function updateProgress() {
           const percent = Math.round(carveProgress * 100);
           progressValue.textContent = `${percent}%`;
@@ -550,6 +620,7 @@
             progressHint.textContent = "오늬 다듬기 완료";
             progressState.textContent = "완료";
           }
+          updateInteractionGuide();
         }
 
         function updateCutSurface() {
@@ -841,6 +912,7 @@
             }
           }
           camera.lookAt(cameraTarget);
+          updateInteractionGuide();
           renderer.render(scene, camera);
         });
       })();

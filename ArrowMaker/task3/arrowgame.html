@@ -51,13 +51,16 @@
       ></iframe>
     </main>
     <script>
+      
+      //스테이지 연결 에러 해결 전 코드 
       const stageHost = document.getElementById("stage-host");
-      let activeFrame = stageHost.querySelector("iframe");
+      let activeFrame = stageHost.querySelector("iframe"); 
       let pendingFrame = null;
       let pendingStage = null;
 
       window.addEventListener("message", (event) => {
-        if (event.origin !== window.location.origin) return;
+        // 조기종료 방어용
+        if (event.origin !== window.location.origin) return; 
         const message = event.data;
         if (!message || typeof message !== "object") return;
 
@@ -92,6 +95,17 @@
           window.setTimeout(() => previousFrame.remove(), 600);
         }
       });
+      
+      /*
+      const stageHost = document.getElementById("stage-host");
+      let activeFrame = stageHost.querySelector("iframe"); 
+      let pendingFrame = null;
+      let pendingStage = null;
+      let fallbackTimer = null;
+
+
+      */
+
     </script>
   </body>
 </html>

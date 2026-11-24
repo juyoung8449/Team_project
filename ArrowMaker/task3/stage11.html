@@ -37,6 +37,36 @@
         linear-gradient(90deg, rgba(13, 20, 18, .86), rgba(13, 20, 18, .38) 36%, transparent 68%),
         linear-gradient(0deg, rgba(11, 17, 15, .76), transparent 38%, rgba(11, 17, 15, .22));
     }
+    #click-guide, #drag-guide {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #click-guide[hidden], #drag-guide[hidden] { display: none; }
+    #click-guide circle, #drag-guide path {
+      fill: none;
+      stroke: rgba(255, 255, 248, .95);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, .7));
+      animation: guide-pulse 1.7s ease-in-out infinite;
+    }
+    #drag-guide-line {
+      stroke-dasharray: 6 8;
+      animation: guide-flow 1.3s linear infinite, guide-pulse 1.7s ease-in-out infinite;
+    }
+    @keyframes guide-flow { to { stroke-dashoffset: -28; } }
+    @keyframes guide-pulse {
+      0%, 100% { opacity: .58; }
+      50% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #click-guide circle, #drag-guide path { animation: none; }
+    }
     #interface { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
     .topbar {
       position: absolute;
@@ -235,6 +265,11 @@
 <body>
   <div id="scene" aria-label="뒤쪽 화살과 앞쪽 깃털의 깃대를 분리하는 3D 작업대"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <svg id="click-guide" aria-hidden="true" hidden><circle></circle></svg>
+  <svg id="drag-guide" aria-hidden="true" hidden>
+    <path id="drag-guide-line"></path>
+    <path id="drag-guide-head"></path>
+  </svg>
   <main id="interface">
     <header class="topbar">
       <div class="brand">
@@ -288,6 +323,11 @@
         const progressHint = document.getElementById("progress-hint");
         const progressState = document.getElementById("progress-state");
         const completionScreen = document.getElementById("complete-screen");
+        const clickGuide = document.getElementById("click-guide");
+        const clickGuideCircle = clickGuide.querySelector("circle");
+        const dragGuide = document.getElementById("drag-guide");
+        const dragGuideLine = document.getElementById("drag-guide-line");
+        const dragGuideHead = document.getElementById("drag-guide-head");
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17211e);
@@ -621,7 +661,14 @@
 
         const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
         const laidCameraPosition = new THREE.Vector3(0, 4.8, 8.9);
-        const cameraTarget = new THREE.Vector3(0, 0.88, -0.05);
+        const laidCameraTarget = new THREE.Vector3(0, 0.88, -0.05);
+        const focusedCameraTarget = focusedFeatherPosition.clone().add(
+          new THREE.Vector3(0, 0, quill.position.z).applyQuaternion(focusedFeatherOrientation).multiplyScalar(focusScale)
+        );
+        const focusedCameraPosition = focusedCameraTarget.clone().add(
+          laidCameraPosition.clone().sub(laidCameraTarget).multiplyScalar(0.72 / 1.4)
+        );
+        const cameraTarget = laidCameraTarget.clone();
         camera.position.copy(laidCameraPosition);
         camera.lookAt(cameraTarget);
 
@@ -643,6 +690,51 @@
           camera.aspect = width / height;
           camera.updateProjectionMatrix();
           renderer.setSize(width, height, false);
+        }
+
+        function updateInteractionGuide() {
+          clickGuide.toggleAttribute("hidden", phase !== "ready");
+          const showDrag = phase === "pull-ready" || phase === "dragging";
+          dragGuide.toggleAttribute("hidden", !showDrag);
+          if (phase !== "ready" && !showDrag) return;
+          camera.updateMatrixWorld(true);
+          featherRoot.updateMatrixWorld(true);
+          const rect = renderer.domElement.getBoundingClientRect();
+          function project(point) {
+            point.project(camera);
+            return new THREE.Vector2(
+              rect.left + (point.x + 1) * rect.width / 2,
+              rect.top + (1 - point.y) * rect.height / 2
+            );
+          }
+          if (phase === "ready") {
+            const center = project(quill.localToWorld(new THREE.Vector3(0, 0, 0)));
+            const start = project(quill.localToWorld(new THREE.Vector3(0, -featherLength * 0.48, 0)));
+            const end = project(quill.localToWorld(new THREE.Vector3(0, featherLength * 0.48, 0)));
+            const shaftScreenLength = start.distanceTo(end);
+            clickGuideCircle.setAttribute("cx", center.x);
+            clickGuideCircle.setAttribute("cy", center.y);
+            clickGuideCircle.setAttribute("r", Math.min(12, shaftScreenLength * 0.2));
+            clickGuideCircle.style.strokeWidth = `${Math.min(1.5, shaftScreenLength * 0.2)}px`;
+            return;
+          }
+          const start = project(featherRoot.localToWorld(new THREE.Vector3(0, 0, quill.position.z)));
+          const end = project(featherRoot.localToWorld(
+            new THREE.Vector3(0, separationDistance * (1 - separationProgress), quill.position.z)
+          ));
+          const direction = end.clone().sub(start);
+          const length = direction.length();
+          if (length < 8) {
+            dragGuide.setAttribute("hidden", "");
+            return;
+          }
+          direction.divideScalar(length);
+          const wing = new THREE.Vector2(-direction.y, direction.x).multiplyScalar(5);
+          const base = end.clone().addScaledVector(direction, -9);
+          const left = base.clone().add(wing);
+          const right = base.clone().sub(wing);
+          dragGuideLine.setAttribute("d", `M ${start.x} ${start.y} L ${end.x} ${end.y}`);
+          dragGuideHead.setAttribute("d", `M ${left.x} ${left.y} L ${end.x} ${end.y} L ${right.x} ${right.y}`);
         }
 
         function updateProgress() {
@@ -679,6 +771,7 @@
             progressHint.textContent = "깃 준비 완료";
             progressState.textContent = "완료";
           }
+          updateInteractionGuide();
         }
 
         function updatePointer(event) {
@@ -696,6 +789,9 @@
           featherRoot.position.copy(focusedFeatherPosition);
           featherRoot.quaternion.copy(focusedFeatherOrientation);
           featherRoot.scale.setScalar(focusScale);
+          camera.position.copy(focusedCameraPosition);
+          cameraTarget.copy(focusedCameraTarget);
+          camera.lookAt(cameraTarget);
           phase = "pull-ready";
           updateProgress();
         }
@@ -750,6 +846,9 @@
           featherRoot.position.copy(initialFeatherPosition);
           featherRoot.quaternion.copy(featherOrientation);
           featherRoot.scale.setScalar(baseFeatherScale);
+          camera.position.copy(laidCameraPosition);
+          cameraTarget.copy(laidCameraTarget);
+          camera.lookAt(cameraTarget);
           shaftGroup.position.set(0, 0, 0);
           for (const { group } of vaneGroups) {
             group.position.set(0, 0, 0);
@@ -833,6 +932,9 @@
             featherRoot.position.lerpVectors(initialFeatherPosition, focusedFeatherPosition, eased);
             featherRoot.quaternion.slerpQuaternions(featherOrientation, focusedFeatherOrientation, eased);
             featherRoot.scale.setScalar(baseFeatherScale + (focusScale - baseFeatherScale) * eased);
+            camera.position.lerpVectors(laidCameraPosition, focusedCameraPosition, eased);
+            cameraTarget.lerpVectors(laidCameraTarget, focusedCameraTarget, eased);
+            camera.lookAt(cameraTarget);
             if (amount >= 1) finishFocus();
           } else if (phase === "settling") {
             const amount = Math.min((window.performance.now() - animationStartedAt) / 1050, 1);
@@ -864,6 +966,7 @@
               updateProgress();
             }
           }
+          updateInteractionGuide();
           renderer.render(scene, camera);
         });
       })();
