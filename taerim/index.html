@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f1e5">
+  <title>화랑의 각궁 공방</title>
+  <link rel="stylesheet" href="./style.css?v=8">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}</script>
+</head>
+<body>
+  <main id="app">
+    <div id="scene-container" aria-label="3D 각궁 공방"></div>
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">弓</div><div><strong>화랑의 각궁 공방</strong><small>HWARANG'S BOW WORKSHOP</small></div></div>
+      <div class="step-heading"><span id="step-number">STEP 01 / 08</span><strong id="step-title">나무 다듬기</strong></div>
+      <div class="step-dots" id="step-dots" aria-label="제작 단계"></div>
+    </header>
+    <div class="scene-label"><span class="scene-label-dot"></span>오늘의 공방 <span class="label-divider"></span> 각궁 만들기</div>
+    <section class="dialogue" aria-label="화랑의 안내"><div class="dialogue-name"><span class="name-spark">✦</span> 화랑 <small>공방 길잡이</small></div><p id="dialogue-text">반가워! 먼저 나무를 부드럽게 다듬어 보자.</p><span class="dialogue-tail" aria-hidden="true"></span></section>
+    <div id="outro-actions" class="outro-actions" hidden><button id="retry-archery" type="button">다시하기</button><button id="next-ceremony" type="button">다음 →</button></div>
+    <div id="final-actions" class="final-actions" hidden><button id="replay-game" type="button">리플레이</button><button id="back-to-gallery" type="button">뒤로가기</button></div>
+    <div id="archery-ui" class="archery-ui" hidden><div class="arrows-left">남은 화살 <strong id="arrows-left">3</strong> / 3</div><div class="power-box"><div class="meter-label"><span>당기는 힘</span><strong id="power-value">0%</strong></div><div class="power-track"><div class="sweet-spot"></div><div id="power-fill" class="power-fill"></div></div></div></div>
+    <div id="craft-progress" class="craft-progress" role="progressbar" aria-label="제작 진행도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="meter-label"><span>제작 진행도</span><strong id="craft-value">0%</strong></div><div class="meter-track"><div id="craft-fill" class="meter-fill"></div></div></div>
+    <div id="elasticity" class="elasticity" role="progressbar" aria-label="활의 탄성" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="meter-label"><span>활의 탄성</span><strong id="elasticity-value">0%</strong></div><div class="meter-track"><div id="elasticity-fill" class="meter-fill"></div></div></div>
+    <div class="bottom-bar"><div class="stage-counter"><span id="bottom-number">01</span><i></i><span>08</span><strong id="bottom-title">나무 다듬기</strong></div><button id="next-step" type="button">다음 스텝 <span aria-hidden="true">→</span></button></div>
+    <div id="loading" role="status">공방을 준비하고 있어요</div>
+  </main>
+  <aside id="rotate-prompt" class="rotate-prompt" aria-label="가로 화면 안내">
+    <div class="rotate-icon" aria-hidden="true"><span></span><i>↻</i></div>
+    <strong>화면을 가로로 돌려주세요</strong>
+    <span>각궁 공방은 가로 화면에서 플레이할 수 있어요.</span>
+    <button id="landscape-start" type="button">가로 모드로 시작</button>
+  </aside>
+  <noscript>이 체험에는 JavaScript가 필요합니다.</noscript>
+  <script type="module" src="./js/main.js?v=19"></script>
+</body>
+</html>
