@@ -1137,6 +1137,7 @@
 
         renderer.domElement.addEventListener("pointermove", (event) => {
           updatePointer(event);
+        
           if (draggedKind === "shaftPosition" || draggedKind === "nockDip" || draggedKind === "nockAttach") {
             if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) return;
             if (draggedKind === "shaftPosition") {
@@ -1148,6 +1149,9 @@
             }
             return;
           }
+          
+
+
           if (draggedKind === "drilling") {
             const directionDelta = event.clientX - drillPointerOrigin;
             bamboo.position.x = Math.max(-0.1, Math.min(0.1, directionDelta * 0.001));
@@ -1179,10 +1183,26 @@
         renderer.domElement.addEventListener("pointerdown", (event) => {
           if (event.button !== 0) return;
           updatePointer(event);
+          /*
           if (phase === "positionShaft" && hitsShaft()) {
             if (!raycaster.ray.intersectPlane(dragPlane, dragPoint)) return;
             draggedKind = "shaftPosition";
             dragOffset.set(bamboo.position.x - dragPoint.x, 0, bamboo.position.z - dragPoint.z);
+          } else if (phase === "drilling" && hitsShaft()) { 
+            */
+
+            if (phase === "positionShaft" && hitsShaft()) {
+            // 클릭 즉시 송곳 위(0, drillStartY, jig.position.z)로 이동하고 90도 회전
+            bamboo.position.set(0, drillStartY, jig.position.z);
+            bamboo.quaternion.copy(verticalQuaternion);
+            phase = "drilling";
+            drillProgress = 0;
+            shakeReversals = 0;
+            instruction.textContent = "화살대를 잡고 좌우로 흔들어 송곳을 밀어 넣으세요.";
+            updateProgress();
+            renderer.domElement.style.cursor = "grab";
+            event.preventDefault();
+            return;
           } else if (phase === "drilling" && hitsShaft()) {
             draggedKind = "drilling";
             lastPointerX = event.clientX;
