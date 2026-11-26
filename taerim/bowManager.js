@@ -1,14 +1,18 @@
-import * as THREE from 'three';
 
+import * as THREE from 'three';
 const clamp = THREE.MathUtils.clamp;
 const bowZ = x => 0.62 * Math.sqrt(Math.max(0, 1 - (x * x) / (1.8 * 1.8))) - 0.35;
 
 export class BowManager {
+class BowManager {
   constructor() {
     this.group = new THREE.Group();
     this.group.name = '제작 중인 각궁';
     this.group.position.set(0, 1.43, 2);
     this.wood = new THREE.MeshStandardMaterial({ color: '#97613c', roughness: 1 });
+
+    this.bambooMaterial = new THREE.MeshStandardMaterial({ color: BAMBOO_IVORY_OCHRE_COLOR, roughness: .7 });
+    this.bambooAccent = new THREE.MeshStandardMaterial({ color: BAMBOO_OCHRE_ACCENT, roughness: .7 });
     this.fiberMaterial = new THREE.MeshStandardMaterial({ color: '#eee8d7', roughness: 1 });
     this.wrap = new THREE.MeshStandardMaterial({ color: '#f1d7a5', roughness: .9 });
     this.dark = new THREE.MeshStandardMaterial({ color: '#503625', roughness: .85 });
@@ -22,6 +26,25 @@ export class BowManager {
     }
     this.bowCurve = new THREE.CatmullRomCurve3(points);
     this.bow = new THREE.Mesh(new THREE.TubeGeometry(this.bowCurve, 80, .105, 10, false), this.wood);
+    const bowGeometry = new THREE.TubeGeometry(this.bowCurve, 80, .105, 10, false);
+    // 하나의 활 메시에서 아랫면만 대나무 층으로 분리해 갈색 몸체를 유지합니다.
+    const indices = [[], [], []];
+    const normals = bowGeometry.getAttribute('normal');
+    const sourceIndex = bowGeometry.getIndex();
+    for (let segment = 0; segment < 80; segment++) {
+      for (let side = 0; side < 10; side++) {
+        const normalY = (normals.getY(side) + normals.getY(side + 1)) / 2;
+        const material = normalY < -.65 ? 1 : normalY < -.2 ? 2 : 0;
+        for (let i = 0; i < 6; i++) indices[material].push(sourceIndex.getX((segment * 10 + side) * 6 + i));
+      }
+    }
+    bowGeometry.setIndex(indices.flat());
+    let start = 0;
+    indices.forEach((group, material) => {
+      bowGeometry.addGroup(start, group.length, material);
+      start += group.length;
+    });
+    this.bow = new THREE.Mesh(bowGeometry, [this.wood, this.bambooMaterial, this.bambooAccent]);
     this.bowBasePositions = this.bow.geometry.attributes.position.array.slice();
     this.bow.name = '거친 활 몸체'; this.bow.castShadow = true; this.bowGroup.add(this.bow);
     this.grip = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .38, 16), this.wrap);
@@ -104,6 +127,9 @@ export class BowManager {
     if (type === 'comb') {
       this.addBox(group, [.55, .1, .14], [0, .1, 0], this.wood);
       for (let index = 0; index < 7; index++) this.addBox(group, [.04, .08, .2], [-.24 + index * .08, .08, .14], this.wood);
+      const handle = new THREE.MeshStandardMaterial({ color: '#97613c', roughness: 1 });
+      this.addBox(group, [.55, .1, .14], [0, .1, 0], handle);
+      for (let index = 0; index < 7; index++) this.addBox(group, [.04, .08, .2], [-.24 + index * .08, .08, .14], handle);
     } else {
       const handle = this.addBox(group, [.12, .12, .62], [0, .12, .2], this.dark); handle.rotation.x = -.3;
       this.addBox(group, type === 'adze' ? [.42, .08, .15] : [.1, .07, .27], [0, .08, -.12], this.metal);

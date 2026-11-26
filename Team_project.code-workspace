@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Downloads/Team_project-main/taerim"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Team_project"
+	}
+}

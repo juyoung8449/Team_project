@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export function createWorkshop(scene) {
+
+function createWorkshop(scene) {
   const workshop = new THREE.Group(); workshop.name = '전통 각궁 공방'; scene.add(workshop);
   const wood = new THREE.MeshStandardMaterial({ color:'#a66c42', roughness:.8 });
   const darkWood = new THREE.MeshStandardMaterial({ color:'#74442d', roughness:.85 });

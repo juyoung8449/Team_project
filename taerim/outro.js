@@ -4,6 +4,7 @@ const targetCenter = new THREE.Vector3(0, 2.45, -14);
 const targetRadius = .55;
 
 export class Outro {
+class Outro {
   constructor({ scene, camera, canvas, hwarang, bow, workshop, guide, ui }) {
     Object.assign(this, { scene, camera, canvas, hwarang, bow, workshop, guide, ui });
     this.group = new THREE.Group(); this.group.name = '야외 활터'; scene.add(this.group); this.group.visible = false;
@@ -208,6 +209,16 @@ export class Outro {
     this.ceremonyFinished = false;
     this.medalSoundPlayed = [false, false];
     try { const AudioContext = window.AudioContext || window.webkitAudioContext; if (AudioContext) { this.audioContext = this.audioContext || new AudioContext(); this.audioContext.resume().catch(() => {}); } } catch { this.audioContext = null; }
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        this.audioContext = this.audioContext || new AudioContext();
+        this.audioContext.resume().catch(error => console.warn('입단식 효과음을 재생할 수 없습니다:', error));
+      }
+    } catch (error) {
+      console.warn('입단식 효과음을 준비할 수 없습니다:', error);
+      this.audioContext = null;
+    }
     this.badges.visible = true; for (const medal of this.medals) medal.scale.setScalar(.001);
     this.ui.setMode('ceremony'); this.ui.setDialogue('너 오늘 정말 멋졌어. 각궁 만들기를 마스터 하다니 대단해. 이제부터 너를 우리의 화랑에 입단시켜주겠다 하하하 축하한다!');
   }
@@ -287,3 +298,4 @@ export class Outro {
 }
 
 export function startOutro(outro) { outro.start(); }
+}

@@ -1,0 +1,499 @@
+:root { color-scheme: light; --green: #376e5d; --ink: #484b3e; --orange: #d66e49; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: #dcebdc; color: var(--ink); font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid #244e40; outline-offset: 3px; }
+.app, .world { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; }
+.world { overflow: hidden; background: #dcebdc; }
+.scene-container, .scene-container canvas { display: block; width: 100%; height: 100%; }
+.scene-container canvas { touch-action: none; }
+.scene-container.playing canvas { cursor: crosshair; }
+.scene-container.heating canvas { cursor: grab; }
+.scene-container.heating canvas:active { cursor: grabbing; }
+.scene-container.assembling canvas { touch-action: manipulation; cursor: pointer; }
+.scene-container.gluing canvas { touch-action: none; cursor: crosshair; }
+
+.speech { position: absolute; top: 16%; left: 52%; padding: 14px 20px; border: 2px solid #ebddc2; border-radius: 17px; background: #fffdf6; box-shadow: 0 5px 0 rgba(112, 126, 91, .12); pointer-events: none; }
+.speech::after { position: absolute; bottom: -9px; left: 25px; width: 14px; height: 14px; border-right: 2px solid #ebddc2; border-bottom: 2px solid #ebddc2; background: #fffdf6; content: ""; transform: rotate(45deg); }
+.speech span, .speech strong { display: block; white-space: nowrap; }
+.speech span { margin-bottom: 4px; color: #a56d4f; font-size: 15px; font-weight: 800; }
+.speech strong { color: #4a705b; font-size: 22px; }
+.loading-error { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 32px; background: #f6f2e5; color: #8e493b; text-align: center; line-height: 1.7; font-size: 20px; font-weight: 700; }
+
+.intro-panel { position: fixed; z-index: 2; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; padding: 16px max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); pointer-events: none; }
+.intro-card { width: min(760px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 22px 28px; border: 1px solid rgba(255,255,255,.8); border-radius: 24px; background: rgba(255,253,246,.94); box-shadow: 0 10px 40px rgba(49,69,49,.16); pointer-events: auto; }
+.eyebrow { margin: 0 0 4px; color: #a96345; font-size: 18px; font-weight: 900; letter-spacing: .08em; }
+h1 { margin: 0; color: var(--green); font-size: clamp(32px, 3.4vw, 48px); line-height: 1.15; letter-spacing: -.05em; }
+h1 > span:first-child { color: #687b65; font-size: .64em; }
+.accent { color: #d78257; }
+.intro-card > p:not(.eyebrow) { margin: 8px 0; font-size: 20px; line-height: 1.45; word-break: keep-all; }
+.primary-button, .secondary-button { min-height: 72px; padding: 14px 22px; border-radius: 17px; font-size: 23px; font-weight: 900; cursor: pointer; }
+.primary-button { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; background: var(--orange); box-shadow: 0 5px 0 #ad583e; color: white; transition: transform .18s, box-shadow .18s; }
+.primary-button span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2); }
+.primary-button:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 7px 0 #ad583e; }
+.primary-button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 2px 0 #ad583e; }
+.primary-button:disabled, .secondary-button:disabled { opacity: .6; cursor: not-allowed; }
+.intro-card .primary-button { width: 100%; margin-top: 14px; }
+.secondary-button { border: 1px solid #cddbc9; background: #f2f7ed; color: #547a64; }
+.secondary-button:not(:disabled):hover { background: #e4f0e2; }
+
+.stage-panel { position: fixed; z-index: 3; inset: 0; pointer-events: none; }
+.hud-top, .hud-bottom { position: absolute; right: max(20px, env(safe-area-inset-right)); left: max(20px, env(safe-area-inset-left)); }
+.hud-top { top: max(16px, env(safe-area-inset-top)); }
+.hud-bottom { bottom: max(22px, env(safe-area-inset-bottom)); display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.hud-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hud-header-actions { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+.help-button { width: 44px; height: 44px; border: 1px solid #cddbc9; border-radius: 50%; background: #fffdf6; color: var(--green); font-size: 24px; font-weight: 900; cursor: pointer; }
+.help-panel { position: absolute; z-index: 4; top: 58px; right: 0; width: min(390px, 90vw); max-height: min(65dvh, 360px); overflow: auto; padding: 14px 18px; border-radius: 16px; background: #fffdf6; box-shadow: 0 5px 22px rgba(49,69,49,.25); color: #526e58; font-size: 17px; font-weight: 700; line-height: 1.4; pointer-events: auto; }
+.help-panel p { margin: 0 0 8px; word-break: keep-all; }
+.help-panel p:last-child { margin-bottom: 0; }
+.stage-heading { padding: 8px 16px; border-radius: 16px; background: rgba(255,253,246,.92); }
+.stage-step { margin: 0; color: #b76647; font-size: 18px; font-weight: 900; letter-spacing: .1em; }
+.stage-panel h2 { margin: 2px 0 0; color: var(--green); font-size: clamp(26px, 2.5vw, 38px); line-height: 1.15; letter-spacing: -.04em; word-break: keep-all; }
+.stage-panel h2:focus { outline: none; }
+.back-button { min-height: 58px; pointer-events: auto; }
+.stage-progress { display: flex; gap: 4px; width: min(360px, 100%); margin-top: 6px; padding: 4px; border-radius: 12px; background: rgba(255,253,246,.92); }
+.stage-progress-item { --fill: 0%; display: grid; flex: 1; place-items: center; min-width: 0; height: 25px; border: 1px solid #aec5a9; border-radius: 7px; background: linear-gradient(to right, #78b779 var(--fill), #e5eee0 var(--fill)); color: #274c37; font-size: 15px; font-weight: 900; }
+.stage-progress-item[aria-current="step"] { outline: 2px solid #d66e49; outline-offset: -2px; }
+.stage-info, .heat-info { border: 1px solid rgba(255,255,255,.8); border-radius: 16px; background: rgba(255,253,246,.94); color: #547a64; box-shadow: 0 5px 22px rgba(49,69,49,.12); font-size: 20px; font-weight: 800; }
+.stage-info { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 12px 16px; }
+.rotation-control { display: flex; align-items: center; gap: 12px; }
+.rotation-control label { white-space: nowrap; }
+#rotation-slider { width: clamp(120px, 15vw, 240px); min-height: 44px; margin: 0; accent-color: var(--green); cursor: pointer; pointer-events: auto; }
+.stage-actions { display: flex; flex-shrink: 0; gap: 12px; pointer-events: auto; }
+.stage-actions button { white-space: nowrap; }
+.stage-actions .secondary-button { min-width: 130px; }
+.stage-actions .primary-button { min-width: 180px; }
+.heat-info { width: min(520px, 100%); margin-top: 8px; padding: 10px 16px; }
+.heat-heading { display: flex; justify-content: space-between; gap: 12px; color: #a45b40; }
+.heat-gauge { position: relative; width: 100%; height: 20px; margin: 6px 0; border-radius: 10px; background: #e8c5a5; }
+.heat-success-zone { position: absolute; top: 0; bottom: 0; left: var(--success-start); width: var(--success-width); background: #58a95e; }
+.heat-marker { position: absolute; top: -3px; bottom: -3px; left: var(--heat-position, 0%); width: 5px; border-radius: 3px; background: #8c3d27; transform: translateX(-50%); }
+.heat-info p { margin: 4px 0 0; line-height: 1.3; }
+.assembly-info { position: relative; width: min(460px, 100%); margin-top: 8px; padding: 10px 16px; border-radius: 16px; background: rgba(255,253,246,.94); color: #547a64; font-size: 24px; font-weight: 900; box-shadow: 0 5px 22px rgba(49,69,49,.12); }
+.assembly-heading { display: flex; justify-content: space-between; gap: 12px; }
+.assembly-info progress { display: block; width: 100%; height: 18px; margin: 8px 0 0; accent-color: var(--orange); }
+.glue-info { width: min(460px, 100%); margin-top: 8px; padding: 10px 16px; border-radius: 16px; background: rgba(255,253,246,.94); color: #547a64; font-size: 19px; font-weight: 800; }
+.glue-info progress { display: block; width: 100%; height: 18px; margin: 8px 0 0; accent-color: #bf873c; }
+.glue-choices { display: flex; justify-content: center; gap: 12px; width: 100%; pointer-events: auto; }
+.glue-choice { min-height: 72px; padding: 12px 20px; border: 2px solid #e1d3bb; border-radius: 16px; background: rgba(255,253,246,.97); color: #574e40; font-size: 21px; font-weight: 900; cursor: pointer; }
+.glue-choice:hover { border-color: #b77940; }
+.glue-swatch { display: inline-block; width: 23px; height: 23px; margin-right: 8px; border: 1px solid #a68a72; border-radius: 50%; vertical-align: middle; }
+.glue-swatch.white { background: #f8f4e8; }
+.glue-swatch.ochre { background: #c18a42; }
+.glue-swatch.pink { background: #e9a4ac; }
+.winding-info { width: min(460px, 100%); margin-top: 8px; padding: 10px 16px; border-radius: 16px; background: rgba(255,253,246,.94); color: #547a64; font-size: 21px; font-weight: 900; }
+.winding-info progress { display: block; width: 100%; height: 18px; margin: 8px 0 0; accent-color: #bf873c; }
+.winding-pad { position: absolute; right: max(28px, env(safe-area-inset-right)); bottom: calc(120px + env(safe-area-inset-bottom)); width: 170px; height: 170px; border: 8px solid #e8bb67; border-radius: 50%; background: rgba(255,253,246,.83); box-shadow: 0 0 0 4px rgba(255,247,205,.7), 0 4px 18px rgba(65,78,52,.2); touch-action: none; pointer-events: auto; cursor: grab; user-select: none; }
+.winding-pad:active { cursor: grabbing; }
+.winding-pad-label { position: absolute; inset: 0; display: grid; place-items: center; color: #8d6338; font-size: 18px; font-weight: 900; pointer-events: none; }
+#heat-rules, #heat-results { font-size: 18px; }
+
+dialog { width: min(580px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; border: 0; border-radius: 24px; background: #fffdf6; color: var(--ink); text-align: center; box-shadow: 0 20px 70px rgba(49,69,49,.25); }
+dialog::backdrop { background: rgba(37,55,42,.55); }
+dialog h2 { margin: 8px 0; color: var(--green); font-size: 32px; }
+dialog p { color: #657561; font-size: 21px; line-height: 1.5; word-break: keep-all; }
+dialog .primary-button { width: 100%; margin-top: 16px; }
+.result-icon { color: #d7a672; font-size: 42px; }
+
+@media (max-width: 700px) {
+  .intro-panel { padding: 12px 12px max(16px, env(safe-area-inset-bottom)); }
+  .intro-card { padding: 16px 18px; }
+  .intro-card > p:not(.eyebrow) { font-size: 18px; }
+  .speech { top: 12%; left: auto; right: 16px; }
+  .hud-top, .hud-bottom { right: max(12px, env(safe-area-inset-right)); left: max(12px, env(safe-area-inset-left)); }
+  .hud-top { top: max(10px, env(safe-area-inset-top)); }
+  .hud-bottom { bottom: max(16px, env(safe-area-inset-bottom)); flex-wrap: wrap; gap: 8px; }
+  .stage-heading { padding: 7px 10px; }
+  .stage-panel h2 { font-size: 25px; }
+  .stage-step { font-size: 16px; }
+  .back-button { min-height: 48px; padding: 10px; font-size: 18px; }
+  .stage-info, .heat-info { font-size: 18px; }
+  .stage-info { width: 100%; padding: 8px 12px; gap: 4px 12px; }
+  .rotation-control { flex: 1; justify-content: space-between; }
+  #rotation-slider { width: clamp(90px, 25vw, 180px); }
+  .stage-actions { width: 100%; }
+  .glue-choices { gap: 6px; }
+  .glue-choice { flex: 1; min-height: 60px; padding: 8px 4px; font-size: 16px; }
+  .glue-swatch { width: 18px; height: 18px; margin-right: 3px; }
+  .winding-pad { width: 140px; height: 140px; right: 18px; bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .winding-info { font-size: 18px; padding: 8px 12px; }
+  .stage-actions .secondary-button { flex: 1; min-width: 0; }
+  .stage-actions .primary-button { flex: 2; min-width: 0; }
+  .heat-info { padding: 8px 12px; }
+  .assembly-info { font-size: 20px; }
+  #heat-rules, #heat-results { font-size: 16px; }
+}
+@media (max-width: 380px) {
+  .stage-panel h2 { font-size: 20px; }
+  .stage-panel.bending .stage-heading { display: flex; align-items: center; gap: 7px; }
+  .stage-panel.bending .stage-step { font-size: 14px; white-space: nowrap; }
+  .back-button { white-space: nowrap; font-size: 16px; }
+  .bending #bending-controls { position: fixed; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .bending .heat-info { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; width: min(250px, 100%); margin-left: auto; padding: 6px 8px; font-size: 16px; }
+  .bending .heat-gauge { grid-column: 1 / -1; margin: 2px 0; }
+  .bending .heat-info p { grid-column: 1 / -1; margin: 0; }
+  .bending #heat-rules, .bending #heat-results { font-size: 14px; }
+  .stage-actions button { font-size: 20px; }
+}
+@media (max-height: 550px) and (orientation: landscape) {
+  .intro-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 20px; padding: 12px 18px; }
+  .intro-card .eyebrow, .intro-card h1, .intro-card > p { grid-column: 1; }
+  .intro-card > p:not(.eyebrow) { margin: 0; font-size: 16px; }
+  .intro-card .primary-button { grid-column: 2; grid-row: 1 / 6; width: auto; margin: 0; }
+  .speech { top: 5%; }
+  .hud-top { top: 6px; }
+  .hud-bottom { bottom: 10px; }
+  .stage-heading { padding: 5px 10px; }
+  .stage-step { font-size: 14px; }
+  .stage-panel h2 { font-size: 22px; }
+  .back-button { min-height: 44px; padding: 8px 12px; font-size: 18px; }
+  .stage-progress { width: min(300px, 100%); margin-top: 4px; }
+  .stage-progress-item { height: 22px; }
+  .heat-info { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; width: min(700px, 100%); margin-top: 4px; padding: 5px 10px; font-size: 16px; }
+  .bending #bending-controls { position: fixed; right: 20px; bottom: 70px; left: 20px; }
+  .bending .heat-info { margin-left: auto; }
+  .heat-gauge { grid-column: 1 / -1; margin: 4px 0; height: 16px; }
+  .heat-info p, #heat-rules, #heat-results { margin: 0; font-size: 14px; }
+  .assembly-info { display: flex; align-items: center; gap: 12px; width: min(700px, 100%); margin-top: 4px; padding: 5px 10px; font-size: 16px; }
+  .assembly-heading { flex: 1; }
+  .assembly-info progress { flex: 1; width: auto; margin: 0; }
+  .winding-pad { width: 105px; height: 105px; bottom: 76px; right: 20px; }
+  .winding-pad-label { font-size: 14px; }
+  .winding-info { width: min(320px, 100%); padding: 5px 10px; font-size: 16px; }
+  .stage-info { padding: 6px 10px; font-size: 16px; }
+  .primary-button, .secondary-button { min-height: 52px; padding: 8px 16px; font-size: 19px; }
+}
+@media (max-height: 550px) and (orientation: landscape) {
+  .intro-panel { padding: 10px max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .intro-card { width: min(840px, 100%); gap: 5px 20px; padding: 12px 18px; }
+  .intro-card > p:not(.eyebrow) { font-size: 18px; line-height: 1.3; }
+  .intro-card h1 { font-size: 30px; }
+  .intro-card .primary-button { grid-row: 1 / 5; }
+  .speech { padding: 8px 14px; }
+  .speech span { font-size: 16px; }
+  .speech strong { font-size: 20px; }
+  .hud-top, .hud-bottom { right: max(12px, env(safe-area-inset-right)); left: max(12px, env(safe-area-inset-left)); }
+  .stage-step { font-size: 16px; }
+  .stage-panel h2 { font-size: 23px; }
+  .stage-info { font-size: 18px; }
+  .stage-info { width: min(72%, calc(100% - 190px)); max-width: none; gap: 4px 10px; }
+  .rotation-control { gap: 6px; }
+  #rotation-slider { width: clamp(90px, 13vw, 150px); }
+  .stage-actions { width: auto; gap: 8px; }
+  .stage-actions .secondary-button, .stage-actions .primary-button { min-width: 0; }
+  .primary-button, .secondary-button { min-height: 48px; padding: 8px 14px; font-size: 19px; }
+  .back-button { min-height: 44px; }
+  .bending #bending-controls { position: absolute; top: 56px; right: 0; bottom: auto; left: auto; width: min(42%, 340px); }
+  .heat-info { display: block; width: 100%; font-size: 18px; }
+  .heat-info p, #heat-rules, #heat-results { font-size: 16px; line-height: 1.2; }
+  .assembly-info, .glue-info, .winding-info { width: min(44%, 350px); font-size: 18px; }
+  .assembly-info { flex-wrap: wrap; }
+  .glue-choice { min-height: 48px; padding: 6px 12px; font-size: 18px; }
+  .winding-pad { width: 110px; height: 110px; bottom: max(70px, calc(60px + env(safe-area-inset-bottom))); }
+  .winding-pad-label { font-size: 16px; }
+  dialog { padding: 14px 20px; }
+  dialog h2 { font-size: 26px; }
+  dialog p { margin: 8px 0; font-size: 18px; line-height: 1.3; }
+  dialog .primary-button { margin-top: 8px; }
+  .result-icon { font-size: 28px; }
+}
+@media (min-width: 701px) and (max-height: 550px) and (orientation: landscape) {
+  .intro-panel { justify-content: flex-end; }
+  .intro-card { display: block; width: min(440px, 48%); padding: 14px 18px; }
+  .intro-card h1 { font-size: 27px; }
+  .intro-card > p:not(.eyebrow) { margin-top: 6px; font-size: 18px; }
+  .intro-card .primary-button { width: 100%; margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+.continuation-panel { position: fixed; z-index: 3; inset: 0; pointer-events: none; }
+.continuation-header { position: absolute; top: max(16px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); left: max(20px, env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.continuation-header h2 { margin: 2px 0 0; color: var(--green); font-size: clamp(22px, 2.5vw, 36px); }
+.continuation-header button, .continuation-actions { pointer-events: auto; }
+.continuation-dialogue, .continuation-progress { position: absolute; padding: 14px 18px; border: 1px solid #ebddc2; border-radius: 16px; background: rgba(255,253,246,.95); box-shadow: 0 5px 22px rgba(49,69,49,.16); color: #526e58; font-weight: 700; }
+.continuation-dialogue { top: max(110px, 14vh); right: max(20px, env(safe-area-inset-right)); width: min(280px, 36vw); }
+.continuation-dialogue strong { color: #a96345; }
+.continuation-dialogue p { margin: 8px 0 0; line-height: 1.4; word-break: keep-all; }
+.continuation-progress { bottom: max(24px, env(safe-area-inset-bottom)); left: max(20px, env(safe-area-inset-left)); width: min(280px, 45vw); }
+.continuation-progress label { display: flex; justify-content: space-between; gap: 8px; }
+.continuation-progress progress { display: block; width: 100%; height: 16px; margin-top: 8px; accent-color: var(--orange); }
+.archery-progress label { margin-top: 8px; }
+.archery-progress small { display: block; margin-top: 4px; }
+.continuation-actions { position: absolute; right: max(20px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); display: flex; gap: 10px; }
+.continuation-actions button, .continuation-header button { min-height: 48px; padding: 9px 16px; font-size: 17px; }
+.continuation-dialogue { pointer-events: none; }
+.stage-panel h2 { font-size: clamp(22px, 2.5vw, 36px); }
+.stage-panel .stage-actions button, .stage-panel .back-button { min-width: 0; min-height: 48px; padding: 9px 16px; font-size: 17px; }
+.stage-panel .stage-info, .stage-panel .heat-info, .stage-panel .assembly-info,
+.stage-panel .glue-info, .stage-panel .winding-info {
+  border: 1px solid #ebddc2; background: rgba(255,253,246,.95);
+  box-shadow: 0 5px 22px rgba(49,69,49,.16); color: #526e58; font-size: 16px;
+}
+.stage-panel .hud-bottom { justify-content: flex-end; }
+.stage-panel .stage-info { margin-right: auto; }
+.winding-pad { background: transparent; }
+@media (max-width: 700px), (max-height: 550px) {
+  .continuation-header { top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); left: max(10px, env(safe-area-inset-left)); }
+  .continuation-header h2 { font-size: 18px; }
+  .continuation-header .stage-step { font-size: 13px; }
+  .continuation-header button { flex-shrink: 0; min-height: 44px; padding: 6px 9px; font-size: 14px; }
+  .continuation-dialogue { top: max(72px, 13vh); right: 10px; width: min(230px, 48vw); padding: 9px 12px; font-size: 13px; }
+  .continuation-dialogue p { margin-top: 4px; }
+  .continuation-progress { bottom: max(12px, env(safe-area-inset-bottom)); left: 10px; width: min(220px, 45vw); padding: 9px 12px; font-size: 13px; }
+  .continuation-actions { right: 10px; bottom: max(12px, env(safe-area-inset-bottom)); gap: 6px; }
+  .continuation-actions button { min-height: 44px; padding: 7px 10px; font-size: 14px; }
+  .stage-panel h2 { font-size: 18px; }
+  .stage-panel .stage-step { font-size: 13px; }
+  .stage-panel .stage-actions button, .stage-panel .back-button { min-height: 44px; padding: 7px 10px; font-size: 14px; }
+  .stage-panel .stage-info, .stage-panel .heat-info, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { font-size: 13px; }
+  .stage-panel .stage-progress { width: min(220px, 48%); }
+  .stage-panel .heat-info, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { width: min(220px, 48%); }
+  .stage-panel.bending #bending-controls { position: static; width: auto; }
+  .stage-panel.bending .heat-info { margin-left: 0; }
+  .stage-panel .hud-bottom { gap: 6px; }
+}
+@media (max-width: 380px) {
+  .stage-panel .stage-info { width: 100%; }
+  .stage-panel .hud-header { align-items: flex-start; gap: 4px; }
+  .stage-panel .hud-header-actions { flex-shrink: 0; gap: 4px; }
+  .stage-panel .stage-heading, .stage-panel.bending .stage-heading { display: block; flex: 1; min-width: 0; }
+  .stage-panel .back-button { padding: 6px; font-size: 12px; }
+  .stage-panel .help-button { width: 40px; height: 40px; }
+  .stage-panel #early-dialogue { top: max(90px, 13vh); }
+  .stage-panel.bending #bending-controls { position: static; }
+  .stage-panel.bending .heat-info { display: block; margin-left: 0; }
+  .stage-panel #heat-results, .stage-panel #heat-status { font-size: 12px; }
+}
+
+/* Shared stage guidance and progress */
+.stage-progress-track {
+  position: fixed; z-index: 4; top: var(--progress-top, 100px); left: max(20px, env(safe-area-inset-left));
+  width: 356px; padding: 8px 10px 10px; border: 1px solid #ebddc2; border-radius: 16px;
+  background: rgba(255,253,246,.95); box-shadow: 0 5px 22px rgba(49,69,49,.16);
+  color: #526e58; font-size: 19px; pointer-events: none;
+}
+.stage-progress-track > strong { display: block; margin-bottom: 5px; }
+.stage-progress-items { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.stage-progress-item {
+  height: 39px; border-radius: 10px; font-size: 21px;
+  background: linear-gradient(to right, #78b779 var(--fill), #e5eee0 var(--fill));
+}
+.stage-progress-item.completed { color: #fff; background: #4c9468; }
+.stage-progress-item[aria-current="step"] {
+  position: relative; z-index: 1; border: 3px solid #a93f23; outline: 2px solid #fff4bb;
+  background: linear-gradient(to right, #eda33e var(--fill), #ffe28e var(--fill));
+  color: #74331f; box-shadow: 0 0 0 3px #f4a96b, 0 0 16px #f39d43;
+}
+.stage-progress-item[aria-current="step"]::after {
+  position: absolute; top: -9px; right: -5px; color: #bb4429; content: "\25bc"; font-size: 13px;
+}
+.stage-panel #bending-controls, .stage-panel .assembly-info,
+.stage-panel .glue-info, .stage-panel .winding-info { margin-top: var(--controls-gap, 140px); }
+.stage-panel.bending #bending-controls { position: static; width: auto; }
+
+.intro-card > p:not(.eyebrow) { font-size: 28px; }
+.intro-card h1 { font-size: clamp(45px, 4.8vw, 68px); }
+.intro-card .primary-button { min-height: 76px; font-size: 33px; }
+.eyebrow, .stage-panel .stage-step, .continuation-header .stage-step { font-size: 26px; }
+.stage-panel h2, .continuation-header h2 { font-size: clamp(31px, 3.5vw, 51px); }
+.primary-button, .secondary-button, .stage-panel .stage-actions button,
+.stage-panel .back-button, .continuation-actions button, .continuation-header button {
+  min-height: 64px; padding: 12px 20px; font-size: 24px;
+}
+.stage-panel .stage-actions .secondary-button { min-width: 160px; }
+.stage-panel .stage-actions .primary-button { min-width: 190px; }
+.help-button { width: 52px; height: 52px; font-size: 34px; }
+.help-panel, .continuation-dialogue, .continuation-progress,
+.stage-panel .stage-info, .stage-panel .heat-info, .stage-panel .assembly-info,
+.stage-panel .glue-info, .stage-panel .winding-info { font-size: 23px; }
+.help-panel { font-size: 24px; }
+#heat-rules, #heat-results, .stage-panel #heat-results, .stage-panel #heat-status,
+.winding-pad-label, .archery-progress small { font-size: 26px; }
+.glue-choice { min-height: 68px; padding: 10px 20px; font-size: 30px; }
+.continuation-dialogue { width: min(390px, 34vw); }
+.continuation-progress { width: min(360px, 38vw); }
+dialog h2 { font-size: 45px; }
+dialog p { font-size: 30px; }
+dialog .primary-button { font-size: 33px; }
+.result-icon { font-size: 59px; }
+
+#stage-intro-dialog {
+  width: min(680px, calc(100% - 32px)); max-height: calc(100dvh - 32px);
+  padding: 0; overflow: visible; background: transparent; box-shadow: none;
+}
+#stage-intro-dialog::backdrop { background: rgba(27,40,31,.72); }
+.stage-intro-card {
+  display: flex; flex-direction: column; max-height: calc(100dvh - 32px); overflow: hidden; padding: 32px;
+  border: 3px solid #ead8af; border-radius: 28px; background: #fffdf6;
+  box-shadow: 0 24px 80px rgba(20,35,23,.4);
+}
+.stage-intro-content { min-height: 0; overflow: auto; }
+.stage-intro-card .stage-intro-name { margin: 0; color: #a96345; font-size: 25px; font-weight: 900; }
+.stage-intro-card .stage-intro-step { margin: 12px 0 2px; color: #bb6849; font-size: 20px; font-weight: 900; letter-spacing: .1em; }
+.stage-intro-card h2 { margin: 4px 0 12px; font-size: 40px; }
+.stage-intro-card p { margin: 10px 0; font-size: 26px; line-height: 1.4; }
+.stage-intro-card #stage-intro-rule { font-size: 21px; }
+.stage-intro-card .primary-button { flex-shrink: 0; min-height: 76px; font-size: 28px; }
+
+.praise-sticker {
+  display: none; position: fixed; z-index: 30; top: 26%; left: 50%; min-width: 180px;
+  padding: 16px 25px; border: 5px solid white; border-radius: 40% 50% 40% 50%;
+  background: #e86c36; color: white; box-shadow: 0 0 0 5px #f5c34c, 0 8px 0 #a73d27, 0 12px 24px #46311c80;
+  font-size: 42px; font-weight: 1000; text-align: center; text-shadow: 2px 3px #a73d27;
+  pointer-events: none; transform: translate(-50%, -50%) rotate(-9deg);
+}
+.praise-sticker.perfect { background: #d65073; box-shadow: 0 0 0 5px #ffe067, 0 8px 0 #9c3150, 0 12px 24px #46311c80; }
+.praise-sticker.show { display: block; animation: sticker-pop 1.6s ease both; }
+@keyframes sticker-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-18deg) scale(.25); }
+  22% { opacity: 1; transform: translate(-50%, -50%) rotate(5deg) scale(1.18); }
+  38% { transform: translate(-50%, -50%) rotate(-9deg) scale(.94); }
+  55%, 80% { opacity: 1; transform: translate(-50%, -50%) rotate(-6deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -65%) rotate(5deg) scale(.8); }
+}
+.rapid-cue { position: fixed; z-index: 4; width: 120px; height: 110px; pointer-events: none; transform: translate(-50%, -50%); }
+.rapid-hand { position: absolute; left: 28px; top: 0; color: #fff4c4; font-size: 54px; text-shadow: 0 2px 4px #635130; animation: rapid-tap .32s ease-in-out infinite alternate; }
+.rapid-wave { position: absolute; left: 30px; top: 52px; width: 62px; height: 32px; border: 4px solid #ffe16a; border-radius: 50%; animation: rapid-wave .64s ease-out infinite; }
+.rapid-cue strong { position: absolute; top: 55px; left: 75px; padding: 5px 12px; border: 3px solid #fff; border-radius: 16px; background: #e74e32; color: #fff; font-size: 29px; white-space: nowrap; text-shadow: 2px 2px #a63822; box-shadow: 0 3px 0 #a63822; animation: rapid-shake .24s ease-in-out infinite alternate; }
+@keyframes rapid-tap { to { transform: translateY(14px) rotate(-8deg); } }
+@keyframes rapid-wave { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(1.4); } }
+@keyframes rapid-shake { from { rotate: -8deg; } to { rotate: 8deg; } }
+
+@media (max-width: 700px), (max-height: 550px) {
+  .stage-progress-track { left: 10px; width: 310px; padding: 6px 8px; font-size: 18px; }
+  .stage-progress-items { gap: 4px; }
+  .stage-progress-item { height: 35px; font-size: 21px; }
+  .stage-panel #bending-controls, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { margin-top: var(--controls-gap, 123px); }
+  .stage-panel .heat-info, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { width: min(310px, 48vw); }
+  .stage-panel h2, .continuation-header h2 { font-size: 27px; }
+  .stage-panel .stage-step, .continuation-header .stage-step { font-size: 19px; }
+  .stage-panel .stage-actions button, .stage-panel .back-button,
+  .continuation-actions button, .continuation-header button { min-height: 58px; padding: 9px 12px; font-size: 20px; }
+  .stage-panel .stage-actions .secondary-button { min-width: 100px; }
+  .stage-panel .stage-actions .primary-button { min-width: 110px; }
+  .stage-panel #bending-actions .primary-button:last-child { min-width: 70px; }
+  .stage-panel .stage-info, .stage-panel .heat-info, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info,
+  .continuation-dialogue, .continuation-progress, .help-panel { font-size: 19px; }
+  .help-panel { font-size: 24px; }
+  .stage-panel #heat-results, .stage-panel #heat-status, #heat-rules, #heat-results,
+  .winding-pad-label, .archery-progress small { font-size: 23px; }
+  .continuation-dialogue { width: min(270px, 43vw); padding: 9px 12px; }
+  .continuation-progress { width: min(290px, 42vw); }
+  .glue-choice { min-height: 58px; padding: 8px 6px; font-size: 26px; }
+  .intro-card > p:not(.eyebrow) { font-size: 26px; }
+  .intro-card h1 { font-size: 45px; }
+  .intro-card .primary-button { font-size: 33px; }
+  .stage-intro-card { padding: 20px; }
+  .stage-intro-card .stage-intro-name { font-size: 22px; }
+  .stage-intro-card h2 { font-size: 32px; }
+  .stage-intro-card p { font-size: 22px; }
+  .stage-intro-card #stage-intro-rule { font-size: 19px; }
+  dialog .primary-button { font-size: 33px; }
+  .result-icon { font-size: 59px; }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .stage-panel #early-dialogue, .continuation-panel .continuation-dialogue { top: var(--guide-top, 225px); right: 10px; width: min(250px, 48vw); max-height: var(--guide-max-height, 110px); overflow: auto; pointer-events: auto; }
+  .stage-panel .heat-info, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { width: min(310px, calc(50vw - 20px)); max-height: var(--guide-max-height, 160px); overflow: auto; pointer-events: auto; }
+  .stage-panel.winding #early-dialogue {
+    right: auto; left: 10px; width: min(250px, calc(50vw - 20px));
+    top: calc(var(--guide-top, 225px) + var(--winding-info-height, 70px) + 8px);
+    max-height: max(44px, calc(var(--guide-max-height, 160px) - var(--winding-info-height, 70px) - 8px));
+  }
+  .stage-panel .stage-info { font-size: 19px; }
+  .stage-panel .hud-bottom { flex-wrap: wrap; }
+  .stage-panel .stage-actions { width: 100%; }
+  .stage-panel #bending-actions { gap: 6px; }
+  .stage-panel #bending-actions button { flex: 1 1 auto; padding: 9px 6px; }
+  .glue-choices { flex-wrap: wrap; }
+  .glue-choice { flex: 1 1 auto; font-size: 23px; }
+  .stage-progress-track { width: min(310px, calc(100vw - 20px)); }
+}
+@media (max-height: 550px) and (orientation: landscape) {
+  .stage-progress-track { width: min(310px, 46vw); }
+  .stage-panel #bending-controls, .stage-panel .assembly-info,
+  .stage-panel .glue-info, .stage-panel .winding-info { margin-top: var(--controls-gap, 120px); }
+  .stage-panel .hud-bottom { flex-wrap: nowrap; }
+  .stage-panel .stage-info { width: min(46%, 310px); }
+  .stage-panel .stage-actions { width: auto; }
+  .stage-panel .stage-actions button { flex: 0 0 auto; min-height: 58px; }
+  .stage-panel #early-dialogue, .continuation-panel .continuation-dialogue { top: 85px; max-height: calc(100dvh - 165px); overflow: auto; pointer-events: auto; }
+  .stage-panel.winding #early-dialogue { max-height: max(44px, calc(100dvh - 273px)); }
+  .intro-card { max-height: calc(100dvh - 20px); }
+  .intro-card h1 { font-size: 42px; }
+  .intro-card .primary-button, dialog .primary-button { font-size: 27px; }
+  dialog h2 { font-size: 37px; }
+  dialog p { font-size: 26px; }
+  .result-icon { font-size: 40px; }
+  .stage-intro-card { padding: 14px 24px; }
+  .stage-intro-card h2 { font-size: 32px; }
+  .stage-intro-card p { margin: 5px 0; font-size: 22px; }
+  .stage-intro-card .primary-button { min-height: 60px; margin-top: 8px; }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  .stage-panel .back-button { min-height: 48px; padding: 6px; font-size: 18px; }
+  .stage-progress-track > strong { display: none; }
+}
+@media (max-height: 600px) and (orientation: portrait) {
+  .stage-panel #early-dialogue, .continuation-panel .continuation-dialogue { max-height: min(var(--guide-max-height, 70px), 70px); }
+  .stage-panel .heat-info, .stage-panel .assembly-info, .stage-panel .glue-info, .stage-panel .winding-info {
+    max-height: min(var(--guide-max-height, 100px), 100px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .praise-sticker.show { animation: none; }
+  .rapid-hand, .rapid-wave, .rapid-cue strong { animation: none; }
+}
+
+.heat-arrow { position: fixed; z-index: -1; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.heat-arrow line { stroke: #ff8b20; stroke-width: 5; stroke-dasharray: 10 7; filter: drop-shadow(0 1px 3px #fff2c0); animation: heat-arrow-flow .7s linear infinite; }
+.heat-arrow marker path { fill: #ff8b20; }
+.heat-floating, .heat-active {
+  position: fixed; z-index: 4; pointer-events: none; text-align: center; font-weight: 900;
+  box-shadow: 0 4px 14px #65300b60; transform: translate(-50%, -100%);
+}
+.heat-floating {
+  width: min(320px, 68vw); padding: 8px 12px; border: 2px solid #ffbd52; border-radius: 14px;
+  background: #fff6dcf2; color: #864313; font-size: 19px; line-height: 1.3; word-break: keep-all;
+}
+.heat-active {
+  padding: 7px 12px; border: 2px solid #fff4bc; border-radius: 18px; background: #d84b16;
+  color: #fff; font-size: 22px; white-space: nowrap; transform: translate(-50%, 12px);
+}
+@keyframes heat-arrow-flow { to { stroke-dashoffset: -34; } }
+@media (max-width: 700px), (max-height: 550px) {
+  .heat-floating { font-size: 16px; }
+  .heat-active { font-size: 18px; }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .stage-panel.bending .heat-info { max-height: min(var(--guide-max-height, 120px), 120px); }
+}
+@media (max-height: 600px) and (orientation: portrait) {
+  .heat-floating { width: min(320px, 92vw); padding: 5px 8px; font-size: 15px; line-height: 1.2; }
+}
+@media (max-width: 380px) and (max-height: 600px) and (orientation: portrait) {
+  .stage-progress-track.bending-progress { width: 92px; }
+  .bending-progress .stage-progress-items { grid-template-columns: repeat(2, 1fr); gap: 3px; }
+  .bending-progress .stage-progress-item { height: 23px; font-size: 18px; }
+  .stage-panel.bending #bending-controls { margin-top: calc(var(--controls-gap, 123px) + 26px); }
+  .stage-panel.bending .heat-info { max-height: max(44px, calc(var(--guide-max-height, 160px) - 26px)); padding: 6px; }
+  .stage-panel.bending .heat-heading { gap: 4px; font-size: 17px; }
+  .stage-panel.bending #early-dialogue {
+    top: calc(var(--guide-top, 225px) + 26px);
+    max-height: max(44px, calc(var(--guide-max-height, 110px) - 26px));
+  }
+  .heat-floating { width: min(190px, 60vw); padding: 3px 6px; font-size: 13px; line-height: 1.15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heat-arrow line { animation: none; }
+}

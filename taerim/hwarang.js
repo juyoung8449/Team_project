@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export class Hwarang {
+
+class Hwarang {
   constructor() {
     this.group=new THREE.Group(); this.group.name='화랑'; this.group.position.set(1.05,0,-1.35);
     const skin=new THREE.MeshStandardMaterial({color:'#ffc9a4',roughness:.75}); const hair=new THREE.MeshStandardMaterial({color:'#67402e',roughness:.74});
